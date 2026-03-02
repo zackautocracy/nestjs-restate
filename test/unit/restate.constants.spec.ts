@@ -6,7 +6,7 @@ import {
     SERVICE_METADATA_KEY,
     VIRTUAL_OBJECT_METADATA_KEY,
     WORKFLOW_METADATA_KEY,
-} from "../../src/restate.constants";
+} from "nestjs-restate/restate.constants";
 
 describe("Restate Constants", () => {
     it("should export unique Symbol tokens", () => {

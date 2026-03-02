@@ -1,6 +1,5 @@
 import type * as restate from "@restatedev/restate-sdk";
-import { Handler } from "../../../src/decorators/handler.decorator";
-import { Service } from "../../../src/decorators/service.decorator";
+import { Handler, Service } from "nestjs-restate";
 
 @Service("counter")
 export class CounterService {

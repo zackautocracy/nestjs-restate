@@ -7,7 +7,6 @@
 
 ```sh
 mise install        # Install Node.js 22
-corepack enable     # Enable Yarn
 yarn install        # Install dependencies
 ```
 
@@ -87,7 +86,7 @@ yarn docker:down
 ## Architecture
 
 ```
-src/
+lib/
 ├── decorators/          # @Service, @VirtualObject, @Workflow, @Handler, @Run, @Shared, @InjectClient
 ├── discovery/           # RestateExplorer — discovers decorated classes via NestJS DiscoveryService
 ├── endpoint/            # RestateEndpointManager — manages HTTP/2 server lifecycle

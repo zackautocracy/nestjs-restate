@@ -1,6 +1,5 @@
 import type * as restate from "@restatedev/restate-sdk";
-import { Run, Shared } from "../../../src/decorators/handler.decorator";
-import { Workflow } from "../../../src/decorators/workflow.decorator";
+import { Run, Shared, Workflow } from "nestjs-restate";
 
 @Workflow("signup")
 export class SignupWorkflow {

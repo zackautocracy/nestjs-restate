@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import swc from "unplugin-swc";
 import { defineConfig } from "vitest/config";
 
@@ -7,6 +8,12 @@ export default defineConfig({
             module: { type: "es6" },
         }),
     ],
+    resolve: {
+        alias: {
+            "nestjs-restate/": `${resolve(__dirname, "lib")}/`,
+            "nestjs-restate": resolve(__dirname, "lib/index.ts"),
+        },
+    },
     test: {
         globals: true,
         environment: "node",
@@ -14,8 +21,8 @@ export default defineConfig({
         coverage: {
             provider: "istanbul",
             reporter: ["text", "lcov", "json-summary"],
-            include: ["src/**/*.ts"],
-            exclude: ["src/**/index.ts"],
+            include: ["lib/**/*.ts"],
+            exclude: ["lib/**/index.ts"],
         },
     },
 });

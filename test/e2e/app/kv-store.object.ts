@@ -1,6 +1,5 @@
 import type * as restate from "@restatedev/restate-sdk";
-import { Handler, Shared } from "../../../src/decorators/handler.decorator";
-import { VirtualObject } from "../../../src/decorators/virtual-object.decorator";
+import { Handler, Shared, VirtualObject } from "nestjs-restate";
 
 @VirtualObject("kv-store")
 export class KvStoreObject {

@@ -1,7 +1,7 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
-    project: ["src/**/*.ts"],
+    project: ["lib/**/*.ts"],
     ignoreBinaries: ["pkg-pr-new"],
 };
 
