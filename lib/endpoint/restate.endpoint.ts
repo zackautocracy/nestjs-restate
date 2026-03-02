@@ -7,6 +7,7 @@ import type { EndpointConfig, RestateEndpointServerConfig } from "../restate.int
 export class RestateEndpointManager {
     private readonly logger = new Logger(RestateEndpointManager.name);
     private readonly definitions: any[] = [];
+    private readonly sessions = new Set<http2.ServerHttp2Session>();
     private httpServer: http2.Http2Server | null = null;
     private listeningPort: number | null = null;
 
@@ -32,6 +33,7 @@ export class RestateEndpointManager {
             const serverConfig = config as RestateEndpointServerConfig;
             serverConfig.server.on("request", handler);
             this.httpServer = serverConfig.server;
+            this.trackSessions(serverConfig.server);
             this.logger.log("Restate endpoint attached to existing HTTP/2 server");
             return;
         }
@@ -49,6 +51,7 @@ export class RestateEndpointManager {
             });
 
             this.httpServer = server;
+            this.trackSessions(server);
             const addr = server.address();
             this.listeningPort =
                 typeof addr === "object" && addr !== null ? addr.port : config.port;
@@ -63,15 +66,27 @@ export class RestateEndpointManager {
     async stop(): Promise<void> {
         if (this.httpServer) {
             const server = this.httpServer;
+            // Destroy all active HTTP/2 sessions so close() can finish.
+            // Without this, persistent connections (e.g., from Restate discovery)
+            // keep the server alive indefinitely.
+            for (const session of this.sessions) {
+                session.destroy();
+            }
+            this.sessions.clear();
             await new Promise<void>((resolve) => {
-                server.close(() => {
-                    this.logger.log("Restate endpoint shut down");
-                    resolve();
-                });
+                server.close(() => resolve());
             });
+            this.logger.log("Restate endpoint shut down");
             this.httpServer = null;
         }
         this.listeningPort = null;
+    }
+
+    private trackSessions(server: http2.Http2Server): void {
+        server.on("session", (session: http2.ServerHttp2Session) => {
+            this.sessions.add(session);
+            session.on("close", () => this.sessions.delete(session));
+        });
     }
 
     getListeningPort(): number | null {
