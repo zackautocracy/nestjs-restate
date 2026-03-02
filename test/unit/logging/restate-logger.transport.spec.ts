@@ -1,0 +1,138 @@
+import type { LoggerContext, LogMetadata } from "@restatedev/restate-sdk";
+import { createRestateLoggerTransport } from "nestjs-restate/logging/restate-logger.transport";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+describe("createRestateLoggerTransport", () => {
+    let transport: ReturnType<typeof createRestateLoggerTransport>;
+    let stdoutSpy: ReturnType<typeof vi.spyOn>;
+    let stderrSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        transport = createRestateLoggerTransport();
+        stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+        stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("should suppress logs when replaying", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: true,
+        };
+
+        transport(params, "should be suppressed");
+
+        expect(stdoutSpy).not.toHaveBeenCalled();
+        expect(stderrSpy).not.toHaveBeenCalled();
+    });
+
+    it("should write to stdout for non-error levels", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "payment/charge" } as LoggerContext,
+        };
+
+        transport(params, "Processing payment");
+
+        expect(stdoutSpy).toHaveBeenCalledTimes(1);
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("[Nest]");
+        expect(output).toContain("LOG");
+        expect(output).toContain("[payment/charge]");
+        expect(output).toContain("Processing payment");
+        expect(output.endsWith("\n")).toBe(true);
+    });
+
+    it("should write to stderr for error level", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "order/cancel" } as LoggerContext,
+        };
+
+        transport(params, "Something failed");
+
+        expect(stderrSpy).toHaveBeenCalledTimes(1);
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("ERROR");
+        expect(output).toContain("[order/cancel]");
+    });
+
+    it("should use 'Restate' as fallback context when no invocation context", () => {
+        const params: LogMetadata = {
+            source: "SYSTEM" as any,
+            level: "info" as any,
+            replaying: false,
+        };
+
+        transport(params, "System message");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("[Restate]");
+    });
+
+    it("should format warn level correctly", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "cart/addItem" } as LoggerContext,
+        };
+
+        transport(params, "Low stock");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("WARN");
+    });
+
+    it("should format debug level correctly", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "debug" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Debug info");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("DEBUG");
+    });
+
+    it("should format trace level correctly", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "trace" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Trace info");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("VERBOSE");
+    });
+
+    it("should include additional optional params in output", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "msg", "extra1", { key: "val" });
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("msg");
+        expect(output).toContain("extra1");
+        expect(output).toContain('"key"');
+    });
+});
