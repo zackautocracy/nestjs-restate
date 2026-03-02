@@ -60,10 +60,10 @@
         "prepare": "husky"
     },
     "peerDependencies": {
-        "@nestjs/common": ">=10.0.0",
-        "@nestjs/core": ">=10.0.0",
-        "@restatedev/restate-sdk": ">=1.8.0",
-        "@restatedev/restate-sdk-clients": ">=1.8.0"
+        "@nestjs/common": "^10.0.0 || ^11.0.0",
+        "@nestjs/core": "^10.0.0 || ^11.0.0",
+        "@restatedev/restate-sdk": "^1.10.4",
+        "@restatedev/restate-sdk-clients": "^1.10.4"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
