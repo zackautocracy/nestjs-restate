@@ -13,6 +13,7 @@ import { UserSessionObject } from "./user-session.object";
             autoRegister: {
                 deploymentUrl: "http://host.docker.internal:9080",
             },
+            clients: [CounterService, UserSessionObject, SignupWorkflow],
         }),
     ],
     providers: [CounterService, UserSessionObject, SignupWorkflow],

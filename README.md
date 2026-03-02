@@ -19,6 +19,8 @@ Define Restate workflows, services, and virtual objects as regular NestJS inject
 
 - **Decorator-driven** — `@Workflow()`, `@Service()`, `@VirtualObject()`, `@Handler()`, `@Run()`, `@Shared()`
 - **Full DI support** — constructor injection works like any NestJS provider
+- **Injectable context** — `RestateContext` gives handler methods access to the Restate SDK context via DI
+- **Typed service proxies** — call other Restate services with full type safety via `@InjectClient(ServiceClass)`
 - **Auto-discovery** — decorated classes are registered automatically, no manual wiring
 - **SDK configuration passthrough** — retry policies, timeouts, and handler options forwarded to the Restate SDK
 - **Multiple endpoint modes** — standalone port, external HTTP/2 server, or AWS Lambda
@@ -45,14 +47,17 @@ npm install nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clien
 ```typescript
 import { Module } from '@nestjs/common';
 import { RestateModule } from 'nestjs-restate';
+import { GreeterService } from './greeter.service';
 
 @Module({
     imports: [
         RestateModule.forRoot({
             ingress: 'http://restate:8080',
             endpoint: { port: 9080 },
+            clients: [GreeterService], // enables typed @InjectClient(GreeterService)
         }),
     ],
+    providers: [GreeterService],
 })
 export class AppModule {}
 ```
@@ -60,17 +65,20 @@ export class AppModule {}
 ### 2. Define a component
 
 ```typescript
-import { Service, Handler } from 'nestjs-restate';
-import type { Context } from '@restatedev/restate-sdk';
+import { Service, Handler, RestateContext } from 'nestjs-restate';
 
 @Service('greeter')
 export class GreeterService {
+    constructor(private readonly ctx: RestateContext) {}
+
     @Handler()
-    async greet(ctx: Context, name: string) {
-        return await ctx.run('greeting', () => `Hello, ${name}!`);
+    async greet(name: string) {
+        return await this.ctx.run('greeting', () => `Hello, ${name}!`);
     }
 }
 ```
+
+The Restate SDK context is no longer passed as a handler parameter. Instead, inject `RestateContext` via the constructor — it automatically resolves to the correct context for each request using `AsyncLocalStorage`.
 
 ### 3. Register as a provider
 
@@ -84,6 +92,27 @@ export class GreeterModule {}
 Auto-discovery handles the rest — no manual registration with the Restate endpoint needed.
 
 ### 4. Call it
+
+**Typed proxy** (recommended) — add the service class to `clients` in module config:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { InjectClient, type ServiceClient } from 'nestjs-restate';
+import type { GreeterService } from './greeter.service';
+
+@Injectable()
+export class AppService {
+    constructor(
+        @InjectClient(GreeterService) private readonly greeter: ServiceClient<GreeterService>,
+    ) {}
+
+    async greet(name: string) {
+        return this.greeter.greet(name);
+    }
+}
+```
+
+**Raw Ingress client** — for full SDK access:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -113,7 +142,12 @@ All class decorators implicitly apply `@Injectable()`.
 | `@Handler()` | Handler method on `@Service`, or exclusive handler on `@VirtualObject` |
 | `@Shared()` | Concurrent handler on `@Workflow` or `@VirtualObject` |
 | `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
-| `@InjectClient()` | Injects the Restate `Ingress` client |
+| `@InjectClient()` | Injects the Restate `Ingress` client (raw SDK access) |
+| `@InjectClient(ServiceClass)` | Injects a typed service proxy (requires `clients` in module config) |
+
+| Injectable | Description |
+|---|---|
+| `RestateContext` | Injectable wrapper around the Restate SDK context — automatically scoped to the current request via `AsyncLocalStorage` |
 
 Component and handler decorators (`@Service`, `@VirtualObject`, `@Workflow`, `@Handler`, `@Run`, `@Shared`) also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
 
@@ -122,38 +156,46 @@ Component and handler decorators (`@Service`, `@VirtualObject`, `@Workflow`, `@H
 Services are stateless handlers with durable execution. Each call is retried automatically on failure and runs exactly once to completion. Services are ideal for side effects like sending emails, charging payments, or calling external APIs.
 
 ```typescript
-import { Service, Handler } from 'nestjs-restate';
-import type { Context } from '@restatedev/restate-sdk';
+import { Service, Handler, RestateContext } from 'nestjs-restate';
 
 @Service('notification')
 export class NotificationService {
     constructor(
+        private readonly ctx: RestateContext,
         private readonly sms: SmsProvider,
         private readonly mailer: MailProvider,
     ) {}
 
     @Handler()
-    async sendSms(ctx: Context, input: { phone: string; message: string }) {
+    async sendSms(input: { phone: string; message: string }) {
         // ctx.run() makes this side effect durable — it won't re-execute on retry
-        await ctx.run('send-sms', () =>
+        await this.ctx.run('send-sms', () =>
             this.sms.send(input.phone, input.message),
         );
     }
 
     @Handler()
-    async sendEmail(ctx: Context, input: { to: string; subject: string; body: string }) {
-        await ctx.run('send-email', () =>
+    async sendEmail(input: { to: string; subject: string; body: string }) {
+        await this.ctx.run('send-email', () =>
             this.mailer.send(input.to, input.subject, input.body),
         );
     }
 }
 ```
 
-Call a service from elsewhere in your NestJS app:
+Call a service using a typed proxy:
 
 ```typescript
-const client = this.restate.serviceClient<NotificationService>({ name: 'notification' });
-await client.sendSms({ phone: '+1234567890', message: 'Order shipped!' });
+@Injectable()
+export class OrderService {
+    constructor(
+        @InjectClient(NotificationService) private readonly notifications: ServiceClient<NotificationService>,
+    ) {}
+
+    async notifyShipped(phone: string) {
+        await this.notifications.sendSms({ phone, message: 'Order shipped!' });
+    }
+}
 ```
 
 ## Virtual Objects
@@ -161,31 +203,40 @@ await client.sendSms({ phone: '+1234567890', message: 'Order shipped!' });
 Virtual Objects combine durable state with concurrency control. Each object instance is identified by a key, and `@Handler()` methods run with exclusive access (one at a time per key). `@Shared()` methods can run concurrently.
 
 ```typescript
-import { VirtualObject, Handler, Shared } from 'nestjs-restate';
-import type { ObjectContext, ObjectSharedContext } from '@restatedev/restate-sdk';
+import { VirtualObject, Handler, Shared, RestateContext } from 'nestjs-restate';
 
 @VirtualObject('counter')
 export class CounterObject {
+    constructor(private readonly ctx: RestateContext) {}
+
     @Handler() // exclusive — only one increment runs at a time per key
-    async increment(ctx: ObjectContext, input: { amount: number }) {
-        const current = (await ctx.get<number>('count')) ?? 0;
-        ctx.set('count', current + input.amount);
+    async increment(input: { amount: number }) {
+        const current = (await this.ctx.get<number>('count')) ?? 0;
+        this.ctx.set('count', current + input.amount);
         return current + input.amount;
     }
 
     @Shared() // concurrent — multiple reads can run in parallel
-    async getCount(ctx: ObjectSharedContext) {
-        return (await ctx.get<number>('count')) ?? 0;
+    async getCount() {
+        return (await this.ctx.get<number>('count')) ?? 0;
     }
 }
 ```
 
-Call a virtual object:
+Call a virtual object using a typed proxy:
 
 ```typescript
-const client = this.restate.objectClient<CounterObject>({ name: 'counter' }, 'user-123');
-await client.increment({ amount: 1 });
-const count = await client.getCount();
+@Injectable()
+export class DashboardService {
+    constructor(
+        @InjectClient(CounterObject) private readonly counter: ObjectClient<CounterObject>,
+    ) {}
+
+    async incrementUser(userId: string) {
+        await this.counter.increment({ amount: 1 }, { key: userId });
+        return this.counter.getCount(undefined, { key: userId });
+    }
+}
 ```
 
 ## Workflows
@@ -193,23 +244,25 @@ const count = await client.getCount();
 Workflows are durable, long-running processes with a single `@Run()` entry point. They can suspend on durable promises and receive external signals through `@Shared()` handlers.
 
 ```typescript
-import { Workflow, Run, Shared } from 'nestjs-restate';
-import type { WorkflowContext, WorkflowSharedContext } from '@restatedev/restate-sdk';
+import { Workflow, Run, Shared, RestateContext } from 'nestjs-restate';
 
 @Workflow('payment')
 export class PaymentWorkflow {
-    constructor(private readonly payments: PaymentService) {}
+    constructor(
+        private readonly ctx: RestateContext,
+        private readonly payments: PaymentService,
+    ) {}
 
     @Run()
-    async run(ctx: WorkflowContext, input: { orderId: string; amount: number }) {
-        const intentId = await ctx.run('create-intent', () =>
+    async run(input: { orderId: string; amount: number }) {
+        const intentId = await this.ctx.run('create-intent', () =>
             this.payments.createIntent(input.orderId, input.amount),
         );
 
         // Suspend until an external signal resolves this promise
-        const confirmation = await ctx.promise<string>('payment-confirmed');
+        const confirmation = await this.ctx.promise<string>('payment-confirmed');
 
-        await ctx.run('finalize', () =>
+        await this.ctx.run('finalize', () =>
             this.payments.finalize(intentId, confirmation),
         );
 
@@ -217,8 +270,8 @@ export class PaymentWorkflow {
     }
 
     @Shared()
-    async confirmPayment(ctx: WorkflowSharedContext, input: { confirmationId: string }) {
-        ctx.promise<string>('payment-confirmed').resolve(input.confirmationId);
+    async confirmPayment(input: { confirmationId: string }) {
+        this.ctx.promise<string>('payment-confirmed').resolve(input.confirmationId);
     }
 }
 ```
@@ -226,21 +279,28 @@ export class PaymentWorkflow {
 **Key rules:**
 - Exactly **one** `@Run()` per workflow
 - `@Shared()` methods can be called concurrently while the workflow is running
-- Use `ctx.promise()` for durable signals between run and shared handlers
+- Use `this.ctx.promise()` for durable signals between run and shared handlers
 
-Call a workflow:
+Call a workflow using a typed proxy:
 
 ```typescript
-const client = this.restate.workflowClient<PaymentWorkflow>({ name: 'payment' }, orderId);
+@Injectable()
+export class CheckoutService {
+    constructor(
+        @InjectClient(PaymentWorkflow) private readonly payment: WorkflowClient<PaymentWorkflow>,
+    ) {}
 
-// Start (non-blocking)
-await client.workflowSubmit({ orderId, amount });
+    async startPayment(orderId: string, amount: number) {
+        // Start (non-blocking)
+        await this.payment.workflowSubmit({ orderId, amount }, { key: orderId });
 
-// Wait for result
-const result = await client.workflowAttach();
+        // Wait for result
+        const result = await this.payment.workflowAttach(undefined, { key: orderId });
 
-// Signal the running workflow
-await client.confirmPayment({ confirmationId });
+        // Signal the running workflow
+        await this.payment.confirmPayment({ confirmationId: 'conf-123' }, { key: orderId });
+    }
+}
 ```
 
 ## Configuration
@@ -252,6 +312,7 @@ RestateModule.forRoot({
     ingress: 'http://restate:8080',           // Restate ingress URL
     endpoint: { port: 9080 },                 // HTTP/2 endpoint (see Endpoint Modes below)
     admin: 'http://restate:9070',             // Admin API (for auto-registration)
+    clients: [GreeterService, CounterObject], // Enable typed @InjectClient(T) proxies
     autoRegister: {                           // Auto-register deployment on startup
         deploymentUrl: 'http://host.docker.internal:9080',
         force: true,                          // Overwrite existing (default: true)
@@ -340,11 +401,13 @@ Individual handlers can override component-level settings:
 ```typescript
 @Service('orders')
 export class OrderService {
+    constructor(private readonly ctx: RestateContext) {}
+
     @Handler({ retryPolicy: { maxAttempts: 1 } }) // no retries for idempotent ops
-    async cancelOrder(ctx: Context, orderId: string) { ... }
+    async cancelOrder(orderId: string) { ... }
 
     @Handler({ inactivityTimeout: 60_000 }) // long timeout for slow operations
-    async processReturn(ctx: Context, input: ReturnRequest) { ... }
+    async processReturn(input: ReturnRequest) { ... }
 }
 ```
 
