@@ -135,4 +135,35 @@ describe("createRestateLoggerTransport", () => {
         expect(output).toContain("extra1");
         expect(output).toContain('"key"');
     });
+
+    it("should not throw on circular references", () => {
+        const circular: any = { a: 1 };
+        circular.self = circular;
+
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        expect(() => transport(params, "msg", circular)).not.toThrow();
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("msg");
+    });
+
+    it("should not throw on BigInt values", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        expect(() => transport(params, "count", BigInt(42))).not.toThrow();
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("42");
+    });
 });
