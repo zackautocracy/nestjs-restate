@@ -142,7 +142,9 @@ RestateModule.forRoot({
     ingress: 'http://restate:8080',      // Required: Restate server ingress URL
     endpoint: { port: 9080 },            // Required: HTTP/2 endpoint configuration
     admin: 'http://restate:9070',         // Optional: Restate admin URL
-    autoRegister: true,                   // Optional: Auto-register on startup (default: false)
+    autoRegister: {                       // Optional: Auto-register on startup
+        deploymentUrl: 'http://host.docker.internal:9080',
+    },
 })
 ```
 
@@ -159,7 +161,9 @@ RestateModule.forRootAsync({
         endpoint: {
             port: parseInt(config.getOrThrow('RESTATE_ENDPOINT_PORT'), 10),
         },
-        autoRegister: config.get('NODE_ENV') === 'development',
+        autoRegister: config.get('NODE_ENV') === 'development'
+            ? { deploymentUrl: `http://host.docker.internal:${config.getOrThrow('RESTATE_ENDPOINT_PORT')}` }
+            : undefined,
     }),
 })
 ```
@@ -178,6 +182,33 @@ endpoint: { type: 'lambda' }
 ```
 
 > **Why a separate HTTP/2 server?** Restate communicates over HTTP/2 bidirectional streaming. Express/Fastify (used by NestJS) only support HTTP/1.1. The library runs a dedicated HTTP/2 server alongside your NestJS application.
+
+### Auto-Registration
+
+When `autoRegister` is set, the module registers the deployment with the Restate admin API on startup. This is useful during development so you don't need to manually `curl` the admin endpoint.
+
+```typescript
+autoRegister: {
+    deploymentUrl: 'http://host.docker.internal:9080',  // Where Restate can reach your service
+    force: true,                                         // Overwrite existing deployments (default)
+}
+```
+
+The `deploymentUrl` depends on your environment:
+
+| Environment | `deploymentUrl` |
+|---|---|
+| Docker Desktop | `http://host.docker.internal:9080` |
+| Local (no Docker) | `http://localhost:9080` |
+| Kubernetes | `http://my-service.default:9080` |
+| Docker-in-Docker / CI | `http://<container-ip>:9080` |
+
+When using random ports (`port: 0`), use the `{{port}}` placeholder:
+
+```typescript
+endpoint: { port: 0 },
+autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
+```
 
 ## Decorators
 
