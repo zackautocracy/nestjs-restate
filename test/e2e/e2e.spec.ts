@@ -150,7 +150,7 @@ describe("nestjs-restate E2E", () => {
     afterAll(async () => {
         await app?.close();
         await restateContainer?.stop();
-    }, 30_000);
+    }, 60_000);
 
     describe("Service", () => {
         it("should invoke counter.add and return the sum", async () => {
