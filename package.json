@@ -53,6 +53,10 @@
         "check:package": "publint",
         "check:unused": "knip",
         "check:all": "yarn lint && yarn check:types && yarn build && yarn test && yarn check:exports && yarn check:package && yarn check:unused",
+        "example": "yarn build && tsx --tsconfig example/tsconfig.json example/src/main.ts",
+        "example:dev": "tsx watch --tsconfig example/tsconfig.json example/src/main.ts",
+        "docker:up": "docker compose up -d",
+        "docker:down": "docker compose down",
         "prepare": "husky"
     },
     "peerDependencies": {
@@ -84,6 +88,7 @@
         "rxjs": "^7.8.2",
         "testcontainers": "^11.12.0",
         "tsdown": "^0.21.0-beta.2",
+        "tsx": "^4.21.0",
         "typescript": "^5.9.3",
         "unplugin-swc": "^1.5.9",
         "vitest": "^4.0.18"

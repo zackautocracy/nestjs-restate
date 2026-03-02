@@ -1,0 +1,10 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "paths": {
+            "nestjs-restate": ["../src/index.ts"]
+        },
+        "rootDir": ".."
+    },
+    "include": ["src/**/*.ts", "../src/**/*.ts"]
+}

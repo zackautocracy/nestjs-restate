@@ -12,6 +12,7 @@ import { RestateEndpointManager } from "../../src/endpoint/restate.endpoint";
 import { CounterService } from "./app/counter.service";
 import { GreetingWorkflow } from "./app/greeting.workflow";
 import { KvStoreObject } from "./app/kv-store.object";
+import { SignupWorkflow } from "./app/signup.workflow";
 
 // Service definitions for the ingress client.
 // These mirror the handlers registered by the NestJS decorators.
@@ -40,6 +41,19 @@ const greetingWfDef = restate.workflow({
     name: "greeting-workflow",
     handlers: {
         run: async (_ctx: restate.WorkflowContext, _name: string): Promise<string> => "",
+    },
+});
+
+const signupWfDef = restate.workflow({
+    name: "signup",
+    handlers: {
+        run: async (
+            _ctx: restate.WorkflowContext,
+            _req: { email: string; name: string },
+        ): Promise<{ status: string; email: string }> => ({ status: "", email: "" }),
+        verifyEmail: restate.handlers.workflow.shared(
+            async (_ctx: restate.WorkflowSharedContext): Promise<void> => {},
+        ),
     },
 });
 
@@ -81,7 +95,7 @@ describe("nestjs-restate E2E", () => {
                     endpoint: { port: 0 },
                 }),
             ],
-            providers: [CounterService, KvStoreObject, GreetingWorkflow],
+            providers: [CounterService, KvStoreObject, GreetingWorkflow, SignupWorkflow],
         }).compile();
 
         app = moduleRef.createNestApplication();
@@ -127,7 +141,7 @@ describe("nestjs-restate E2E", () => {
             services?: { name: string }[];
         };
         expect(registration.services).toBeDefined();
-        expect(registration.services?.length).toBeGreaterThanOrEqual(3);
+        expect(registration.services?.length).toBeGreaterThanOrEqual(4);
 
         // 6. Create ingress client
         ingress = clients.connect({ url: ingressUrl });
@@ -174,6 +188,25 @@ describe("nestjs-restate E2E", () => {
             const result = await wf.run("Restate");
             expect(result).toContain("Hello, Restate!");
             expect(result).toContain("(at ");
+        });
+
+        it("should complete signup workflow after receiving verifyEmail signal", async () => {
+            const workflowId = `signup-${Date.now()}`;
+            const wf = ingress.workflowClient(signupWfDef, workflowId);
+
+            // Start the workflow (it will block waiting for the email-verified signal)
+            const resultPromise = wf.run({ email: "test@example.com", name: "Test User" });
+
+            // Give the workflow time to start and reach the promise await
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            // Send the verifyEmail signal
+            await wf.verifyEmail();
+
+            // The workflow should now complete
+            const result = await resultPromise;
+            expect(result.status).toBe("completed");
+            expect(result.email).toBe("test@example.com");
         });
     });
 });
