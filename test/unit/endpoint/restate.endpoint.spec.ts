@@ -54,4 +54,57 @@ describe("RestateEndpointManager", () => {
     it("should report null listening port before start", () => {
         expect(manager.getListeningPort()).toBeNull();
     });
+
+    describe("endpoint options", () => {
+        it("should start with defaultServiceOptions", async () => {
+            const svc = restate.service({
+                name: "svc",
+                handlers: { greet: async () => "hi" },
+            });
+            manager.addDefinition(svc);
+
+            const defaultServiceOptions = {
+                retryPolicy: { maxAttempts: 3, initialInterval: 200 },
+            };
+
+            await manager.start({ port: 0 }, { defaultServiceOptions });
+
+            // If it started without error, the options were accepted
+            expect(manager.getListeningPort()).toBeGreaterThan(0);
+
+            await manager.stop();
+        });
+
+        it("should start without endpoint options (backward compat)", async () => {
+            const svc = restate.service({
+                name: "svc",
+                handlers: { greet: async () => "hi" },
+            });
+            manager.addDefinition(svc);
+
+            await manager.start({ port: 0 });
+
+            expect(manager.getListeningPort()).toBeGreaterThan(0);
+
+            await manager.stop();
+        });
+
+        it("should reject invalid identityKeys", async () => {
+            const svc = restate.service({
+                name: "svc",
+                handlers: { greet: async () => "hi" },
+            });
+            manager.addDefinition(svc);
+
+            // SDK validates key format — invalid key should throw
+            await expect(
+                manager.start(
+                    { port: 0 },
+                    {
+                        identityKeys: ["invalid-key"],
+                    },
+                ),
+            ).rejects.toThrow();
+        });
+    });
 });

@@ -1,10 +1,24 @@
 import { Injectable } from "@nestjs/common";
 import { SERVICE_METADATA_KEY } from "../restate.constants";
-import type { ComponentMetadata } from "../restate.interfaces";
+import type { ServiceComponentMetadata, ServiceDecoratorOptions } from "../restate.interfaces";
 
-export function Service(name: string): ClassDecorator {
+/**
+ * Marks a class as a Restate service.
+ *
+ * @param nameOrOptions - Service name string or full options object.
+ * @example
+ * ```ts
+ * @Service('payments')
+ * // or
+ * @Service({ name: 'payments', options: { retryPolicy: { maxAttempts: 5 } } })
+ * ```
+ */
+export function Service(nameOrOptions: ServiceDecoratorOptions): ClassDecorator {
+    const meta: ServiceComponentMetadata =
+        typeof nameOrOptions === "string" ? { name: nameOrOptions } : nameOrOptions;
+
     return (target) => {
         Injectable()(target as unknown as new (...args: any[]) => any);
-        Reflect.defineMetadata(SERVICE_METADATA_KEY, { name } satisfies ComponentMetadata, target);
+        Reflect.defineMetadata(SERVICE_METADATA_KEY, meta, target);
     };
 }

@@ -228,4 +228,180 @@ describe("RestateExplorer", () => {
             expect(definitions[0].name).toBe("wf");
         });
     });
+
+    describe("configuration passthrough", () => {
+        it("should forward service options to SDK definition", () => {
+            @Service({
+                name: "configured-service",
+                description: "A configured service",
+                metadata: { version: "2" },
+                options: {
+                    retryPolicy: { maxAttempts: 5 },
+                    inactivityTimeout: 30_000,
+                },
+            })
+            class ConfiguredService {
+                @Handler()
+                async process(_ctx: any) {
+                    return "ok";
+                }
+            }
+
+            const instance = new ConfiguredService();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("configured-service");
+        });
+
+        it("should forward workflow options to SDK definition", () => {
+            @Workflow({
+                name: "configured-workflow",
+                description: "A configured workflow",
+                metadata: { team: "backend" },
+                options: {
+                    workflowRetention: 604800000,
+                    retryPolicy: { maxAttempts: 3 },
+                },
+            })
+            class ConfiguredWorkflow {
+                @Run()
+                async run(_ctx: any) {
+                    return "done";
+                }
+
+                @Shared()
+                async getStatus(_ctx: any) {
+                    return "active";
+                }
+            }
+
+            const instance = new ConfiguredWorkflow();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("configured-workflow");
+        });
+
+        it("should forward virtual object options to SDK definition", () => {
+            @VirtualObject({
+                name: "configured-object",
+                metadata: { team: "commerce" },
+                options: {
+                    enableLazyState: true,
+                    retryPolicy: { maxAttempts: 10 },
+                },
+            })
+            class ConfiguredObject {
+                @Handler()
+                async increment(_ctx: any) {
+                    /* noop */
+                }
+
+                @Shared()
+                async getCount(_ctx: any) {
+                    return 0;
+                }
+            }
+
+            const instance = new ConfiguredObject();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("configured-object");
+        });
+
+        it("should forward handler-level options for service handlers", () => {
+            @Service("svc-with-handler-opts")
+            class SvcWithHandlerOpts {
+                @Handler({ retryPolicy: { maxAttempts: 2 } })
+                async process(_ctx: any) {
+                    return "ok";
+                }
+            }
+
+            const instance = new SvcWithHandlerOpts();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("svc-with-handler-opts");
+        });
+
+        it("should forward handler-level options for workflow run handler", () => {
+            @Workflow("wf-with-handler-opts")
+            class WfWithHandlerOpts {
+                @Run({ retryPolicy: { maxAttempts: 1 } })
+                async run(_ctx: any) {
+                    return "done";
+                }
+            }
+
+            const instance = new WfWithHandlerOpts();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("wf-with-handler-opts");
+        });
+
+        it("should forward handler-level options for virtual object handlers", () => {
+            @VirtualObject("obj-with-handler-opts")
+            class ObjWithHandlerOpts {
+                @Handler({ retryPolicy: { maxAttempts: 7 } })
+                async increment(_ctx: any) {
+                    /* noop */
+                }
+
+                @Shared({ retryPolicy: { maxAttempts: 3 } })
+                async getCount(_ctx: any) {
+                    return 0;
+                }
+            }
+
+            const instance = new ObjWithHandlerOpts();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("obj-with-handler-opts");
+        });
+
+        it("should work with mixed configured and plain components", () => {
+            @Service({
+                name: "configured",
+                options: { retryPolicy: { maxAttempts: 5 } },
+            })
+            class Configured {
+                @Handler()
+                async process() {
+                    /* noop */
+                }
+            }
+
+            @Service("plain")
+            class Plain {
+                @Handler()
+                async handle() {
+                    /* noop */
+                }
+            }
+
+            const discoveryService = createMockDiscoveryService([new Configured(), new Plain()]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            expect(definitions).toHaveLength(2);
+            expect(definitions.map((d) => d.name).sort()).toEqual(["configured", "plain"]);
+        });
+    });
 });

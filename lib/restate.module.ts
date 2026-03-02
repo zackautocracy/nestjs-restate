@@ -74,7 +74,10 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         }
 
         if (definitions.length > 0) {
-            await this.endpointManager.start(this.options.endpoint);
+            await this.endpointManager.start(this.options.endpoint, {
+                identityKeys: this.options.identityKeys,
+                defaultServiceOptions: this.options.defaultServiceOptions,
+            });
         }
 
         if (this.options.autoRegister && this.options.admin) {

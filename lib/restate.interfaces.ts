@@ -1,4 +1,11 @@
 import type { Http2Server } from "node:http2";
+import type {
+    DefaultServiceOptions,
+    ObjectOptions,
+    ServiceHandlerOpts,
+    ServiceOptions,
+    WorkflowOptions,
+} from "@restatedev/restate-sdk";
 
 export interface RestateEndpointPortConfig {
     port: number;
@@ -34,6 +41,16 @@ export interface RestateModuleOptions {
     endpoint: EndpointConfig;
     /** Auto-register deployment with Restate server on startup */
     autoRegister?: AutoRegisterOptions;
+    /**
+     * Request identity public keys for validating incoming requests.
+     * @example ["publickeyv1_2G8dCQhArfvGpzPw5Vx2ALciR4xCLHfS5YaT93XjNxX9"]
+     */
+    identityKeys?: string[];
+    /**
+     * Default service options applied to all services, virtual objects, and workflows.
+     * Individual component options override these defaults.
+     */
+    defaultServiceOptions?: DefaultServiceOptions;
 }
 
 export interface RestateModuleAsyncOptions {
@@ -44,11 +61,49 @@ export interface RestateModuleAsyncOptions {
 
 export type HandlerType = "run" | "handler" | "shared";
 
+// ── Handler metadata ──
+
 export interface HandlerMetadata {
     type: HandlerType;
     methodName: string;
+    /** Handler-level SDK options (retryPolicy, timeouts, etc.) */
+    options?: ServiceHandlerOpts<any, any>;
 }
 
-export interface ComponentMetadata {
+// ── Component metadata ──
+
+export interface ServiceComponentMetadata {
     name: string;
+    /** Human-readable description shown in admin tools */
+    description?: string;
+    /** Key/value metadata exposed via the Admin API */
+    metadata?: Record<string, string>;
+    /** Service-level SDK options (retryPolicy, timeouts, etc.) */
+    options?: ServiceOptions;
 }
+
+export interface VirtualObjectComponentMetadata {
+    name: string;
+    /** Human-readable description shown in admin tools */
+    description?: string;
+    /** Key/value metadata exposed via the Admin API */
+    metadata?: Record<string, string>;
+    /** Virtual object SDK options (retryPolicy, timeouts, enableLazyState, etc.) */
+    options?: ObjectOptions;
+}
+
+export interface WorkflowComponentMetadata {
+    name: string;
+    /** Human-readable description shown in admin tools */
+    description?: string;
+    /** Key/value metadata exposed via the Admin API */
+    metadata?: Record<string, string>;
+    /** Workflow SDK options (retryPolicy, timeouts, workflowRetention, etc.) */
+    options?: WorkflowOptions;
+}
+
+// ── Decorator option types (string | object for backward compat) ──
+
+export type ServiceDecoratorOptions = string | ServiceComponentMetadata;
+export type VirtualObjectDecoratorOptions = string | VirtualObjectComponentMetadata;
+export type WorkflowDecoratorOptions = string | WorkflowComponentMetadata;
