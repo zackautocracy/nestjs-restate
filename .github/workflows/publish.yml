@@ -7,10 +7,12 @@ on:
 permissions:
   contents: read
   id-token: write
+  attestations: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: npm
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +31,12 @@ jobs:
       - name: Test
         run: yarn test
 
+      - name: Configure npm registry
+        run: |
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+
       - name: Publish to npm
-        run: yarn npm publish --access public
+        run: npm publish --provenance --access public
         env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
