@@ -18,12 +18,12 @@ describe("RestateExplorer", () => {
             @Workflow("test-workflow")
             class TestWorkflow {
                 @Run()
-                async run(_ctx: any, _input: any) {
+                async run(_input: any) {
                     return "done";
                 }
 
                 @Shared()
-                async signal(_ctx: any) {
+                async signal() {
                     /* noop */
                 }
             }
@@ -41,7 +41,7 @@ describe("RestateExplorer", () => {
             @Workflow("bad-workflow")
             class BadWorkflow {
                 @Shared()
-                async signal(_ctx: any) {
+                async signal() {
                     /* noop */
                 }
             }
@@ -57,12 +57,12 @@ describe("RestateExplorer", () => {
             @Workflow("multi-run")
             class MultiRunWorkflow {
                 @Run()
-                async run1(_ctx: any) {
+                async run1() {
                     /* noop */
                 }
 
                 @Run()
-                async run2(_ctx: any) {
+                async run2() {
                     /* noop */
                 }
             }
@@ -80,12 +80,12 @@ describe("RestateExplorer", () => {
             @Service("test-service")
             class TestService {
                 @Handler()
-                async greet(_ctx: any, _name: string) {
+                async greet(_name: string) {
                     return "hello";
                 }
 
                 @Handler()
-                async farewell(_ctx: any) {
+                async farewell() {
                     /* noop */
                 }
             }
@@ -116,12 +116,12 @@ describe("RestateExplorer", () => {
             @VirtualObject("test-object")
             class TestObject {
                 @Handler()
-                async increment(_ctx: any) {
+                async increment() {
                     /* noop */
                 }
 
                 @Shared()
-                async getCount(_ctx: any) {
+                async getCount() {
                     return 0;
                 }
             }
@@ -242,7 +242,7 @@ describe("RestateExplorer", () => {
             })
             class ConfiguredService {
                 @Handler()
-                async process(_ctx: any) {
+                async process() {
                     return "ok";
                 }
             }
@@ -274,12 +274,12 @@ describe("RestateExplorer", () => {
             })
             class ConfiguredWorkflow {
                 @Run()
-                async run(_ctx: any) {
+                async run() {
                     return "done";
                 }
 
                 @Shared()
-                async getStatus(_ctx: any) {
+                async getStatus() {
                     return "active";
                 }
             }
@@ -310,12 +310,12 @@ describe("RestateExplorer", () => {
             })
             class ConfiguredObject {
                 @Handler()
-                async increment(_ctx: any) {
+                async increment() {
                     /* noop */
                 }
 
                 @Shared()
-                async getCount(_ctx: any) {
+                async getCount() {
                     return 0;
                 }
             }
@@ -338,7 +338,7 @@ describe("RestateExplorer", () => {
             @Service("svc-with-handler-opts")
             class SvcWithHandlerOpts {
                 @Handler({ retryPolicy: { maxAttempts: 2 } })
-                async process(_ctx: any) {
+                async process() {
                     return "ok";
                 }
             }
@@ -356,7 +356,7 @@ describe("RestateExplorer", () => {
             @Workflow("wf-with-handler-opts")
             class WfWithHandlerOpts {
                 @Run({ retryPolicy: { maxAttempts: 1 } })
-                async run(_ctx: any) {
+                async run() {
                     return "done";
                 }
             }
@@ -374,12 +374,12 @@ describe("RestateExplorer", () => {
             @VirtualObject("obj-with-handler-opts")
             class ObjWithHandlerOpts {
                 @Handler({ retryPolicy: { maxAttempts: 7 } })
-                async increment(_ctx: any) {
+                async increment() {
                     /* noop */
                 }
 
                 @Shared({ retryPolicy: { maxAttempts: 3 } })
-                async getCount(_ctx: any) {
+                async getCount() {
                     return 0;
                 }
             }
@@ -419,6 +419,127 @@ describe("RestateExplorer", () => {
 
             expect(definitions).toHaveLength(2);
             expect(definitions.map((d) => d.name).sort()).toEqual(["configured", "plain"]);
+        });
+    });
+
+    describe("ALS context wrapping (v2)", () => {
+        it("should pass only input (not ctx) to user handler", async () => {
+            const receivedArgs: any[][] = [];
+
+            @Service("arg-check")
+            class ArgCheckService {
+                @Handler()
+                async process(...args: any[]) {
+                    receivedArgs.push(args);
+                    return "ok";
+                }
+            }
+
+            const instance = new ArgCheckService();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            const mockCtx = { serviceName: "test" };
+            const mockInput = { data: "hello" };
+            await definitions[0].service.process(mockCtx, mockInput);
+
+            expect(receivedArgs).toHaveLength(1);
+            expect(receivedArgs[0]).toEqual([mockInput]);
+        });
+
+        it("should make ctx available via getCurrentContext inside handler", async () => {
+            const { getCurrentContext } = await import(
+                "nestjs-restate/context/restate-context.store"
+            );
+            let capturedCtx: any;
+
+            @Service("ctx-capture")
+            class CtxCaptureService {
+                @Handler()
+                async capture() {
+                    capturedCtx = getCurrentContext();
+                    return "ok";
+                }
+            }
+
+            const instance = new CtxCaptureService();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            const mockCtx = { serviceName: "ctx-capture", run: vi.fn() };
+            await definitions[0].service.capture(mockCtx, undefined);
+
+            expect(capturedCtx).toBe(mockCtx);
+        });
+
+        it("should wrap workflow run handler with ALS", async () => {
+            const { getCurrentContext } = await import(
+                "nestjs-restate/context/restate-context.store"
+            );
+            let capturedCtx: any;
+
+            @Workflow("als-workflow")
+            class AlsWorkflow {
+                @Run()
+                async run(input: string) {
+                    capturedCtx = getCurrentContext();
+                    return `processed: ${input}`;
+                }
+            }
+
+            const instance = new AlsWorkflow();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            const mockCtx = { workflowId: "wf-123" };
+            await definitions[0].workflow.run(mockCtx, "test-input");
+
+            expect(capturedCtx).toBe(mockCtx);
+        });
+
+        it("should wrap virtual object handlers with ALS", async () => {
+            const { getCurrentContext } = await import(
+                "nestjs-restate/context/restate-context.store"
+            );
+            let capturedCtx: any;
+
+            @VirtualObject("als-object")
+            class AlsObject {
+                @Handler()
+                async increment(amount: number) {
+                    capturedCtx = getCurrentContext();
+                    return amount;
+                }
+            }
+
+            const instance = new AlsObject();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const definitions = explorer.discover();
+
+            const mockCtx = { key: "obj-1" };
+            await definitions[0].object.increment(mockCtx, 5);
+
+            expect(capturedCtx).toBe(mockCtx);
+        });
+
+        it("should throw at startup if @Run() method is not named 'run'", () => {
+            @Workflow("bad-run-name")
+            class BadRunName {
+                @Run()
+                async execute() {
+                    return "done";
+                }
+            }
+
+            const instance = new BadRunName();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+
+            expect(() => explorer.discover()).toThrow(/must be named 'run', found 'execute'/);
         });
     });
 });
