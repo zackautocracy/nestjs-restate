@@ -338,8 +338,8 @@ export class OrderService {
         // Start the workflow (non-blocking)
         await client.workflowSubmit({ orderId, amount });
 
-        // Or start and wait for the result
-        const result = await client.workflowSubmit({ orderId, amount });
+        // Or attach to the running workflow and wait for the result
+        const result = await client.workflowAttach();
     }
 
     async confirmPayment(orderId: string, confirmationId: string) {
