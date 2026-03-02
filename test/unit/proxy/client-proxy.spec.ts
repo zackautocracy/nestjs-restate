@@ -174,6 +174,30 @@ describe("createClientProxy", () => {
         });
     });
 
+    describe("concurrent proxy isolation", () => {
+        it("should isolate concurrent proxy calls to their own context", async () => {
+            const proxy = createClientProxy(PaymentService);
+            const mockClient1 = { charge: vi.fn().mockResolvedValue("pay-1") };
+            const mockClient2 = { charge: vi.fn().mockResolvedValue("pay-2") };
+            const ctx1 = { serviceClient: vi.fn().mockReturnValue(mockClient1) };
+            const ctx2 = { serviceClient: vi.fn().mockReturnValue(mockClient2) };
+
+            const [r1, r2] = await Promise.all([
+                runWithContext(ctx1, async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 5));
+                    return proxy.charge({ amount: 1 });
+                }),
+                runWithContext(ctx2, async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 1));
+                    return proxy.charge({ amount: 2 });
+                }),
+            ]);
+
+            expect(r1).toBe("pay-1");
+            expect(r2).toBe("pay-2");
+        });
+    });
+
     describe("PASSTHROUGH_PROPS guard", () => {
         it("should return undefined for 'then' (prevents thenable detection)", () => {
             const proxy = createClientProxy(PaymentService);

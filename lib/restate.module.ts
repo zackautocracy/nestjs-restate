@@ -39,16 +39,17 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
     }
 
     static forRoot(options: RestateModuleOptions & { clients?: Type[] }): DynamicModule {
-        const clientProviders = RestateModule.createClientProviders(options.clients);
+        const { clients: clientClasses, ...moduleOptions } = options;
+        const clientProviders = RestateModule.createClientProviders(clientClasses);
         const clientTokens = clientProviders.map((p) => (p as any).provide);
         return {
             module: RestateModule,
             imports: [DiscoveryModule],
             providers: [
-                { provide: RESTATE_OPTIONS, useValue: options },
+                { provide: RESTATE_OPTIONS, useValue: moduleOptions },
                 {
                     provide: RESTATE_CLIENT,
-                    useFactory: () => clients.connect({ url: options.ingress }),
+                    useFactory: () => clients.connect({ url: moduleOptions.ingress }),
                 },
                 RestateExplorer,
                 RestateEndpointManager,
