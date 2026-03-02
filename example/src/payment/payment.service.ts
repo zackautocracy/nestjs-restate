@@ -1,5 +1,5 @@
 import { Handler, RestateContext, Service } from "nestjs-restate";
-import type { ChargeRequest, ChargeResult, RefundRequest } from "./interfaces";
+import type { ChargeRequest, ChargeResult, RefundRequest } from "../shared/interfaces";
 import { PaymentGateway } from "./payment-gateway";
 
 /**

@@ -369,7 +369,7 @@ describe("RestateModule", () => {
         });
     });
 
-    describe("clients array", () => {
+    describe("auto-discovered client proxies", () => {
         @Service("payment")
         class PaymentService {
             @Handler()
@@ -392,13 +392,12 @@ describe("RestateModule", () => {
             }
         }
 
-        it("should register client proxy providers from forRoot clients array", async () => {
+        it("should auto-register proxy providers for all decorated components", async () => {
             const module = await Test.createTestingModule({
                 imports: [
                     RestateModule.forRoot({
                         ingress: "http://localhost:8080",
                         endpoint: { port: 9080 },
-                        clients: [PaymentService, CartObject, SignupWorkflow],
                     }),
                 ],
             }).compile();
@@ -415,7 +414,7 @@ describe("RestateModule", () => {
             await module.close();
         });
 
-        it("should register client proxy providers from forRootAsync clients array", async () => {
+        it("should auto-register proxy providers with forRootAsync", async () => {
             const module = await Test.createTestingModule({
                 imports: [
                     RestateModule.forRootAsync({
@@ -423,44 +422,12 @@ describe("RestateModule", () => {
                             ingress: "http://localhost:8080",
                             endpoint: { port: 9080 },
                         }),
-                        clients: [PaymentService],
                     }),
                 ],
             }).compile();
 
             const paymentProxy = module.get(getClientToken(PaymentService));
             expect(paymentProxy).toBeDefined();
-
-            await module.close();
-        });
-
-        it("should work with empty clients array", async () => {
-            const module = await Test.createTestingModule({
-                imports: [
-                    RestateModule.forRoot({
-                        ingress: "http://localhost:8080",
-                        endpoint: { port: 9080 },
-                        clients: [],
-                    }),
-                ],
-            }).compile();
-
-            expect(module).toBeDefined();
-
-            await module.close();
-        });
-
-        it("should work without clients array (backward compat)", async () => {
-            const module = await Test.createTestingModule({
-                imports: [
-                    RestateModule.forRoot({
-                        ingress: "http://localhost:8080",
-                        endpoint: { port: 9080 },
-                    }),
-                ],
-            }).compile();
-
-            expect(module).toBeDefined();
 
             await module.close();
         });

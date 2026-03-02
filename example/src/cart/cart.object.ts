@@ -1,5 +1,5 @@
 import { Handler, RestateContext, Shared, VirtualObject } from "nestjs-restate";
-import type { CartItem } from "./interfaces";
+import type { CartItem } from "../shared/interfaces";
 
 /**
  * Virtual Object — keyed cart state per user.

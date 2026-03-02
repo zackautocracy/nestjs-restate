@@ -54,7 +54,6 @@ import { GreeterService } from './greeter.service';
         RestateModule.forRoot({
             ingress: 'http://restate:8080',
             endpoint: { port: 9080 },
-            clients: [GreeterService], // enables typed @InjectClient(GreeterService)
         }),
     ],
     providers: [GreeterService],
@@ -93,7 +92,7 @@ Auto-discovery handles the rest — no manual registration with the Restate endp
 
 ### 4. Call it
 
-**Typed proxy** (recommended) — add the service class to `clients` in module config:
+**Typed proxy** (recommended) — any `@Service`, `@VirtualObject`, or `@Workflow` class is auto-discovered and available for injection:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -143,7 +142,7 @@ All class decorators implicitly apply `@Injectable()`.
 | `@Shared()` | Concurrent handler on `@Workflow` or `@VirtualObject` |
 | `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
 | `@InjectClient()` | Injects the Restate `Ingress` client (raw SDK access) |
-| `@InjectClient(ServiceClass)` | Injects a typed service proxy (requires `clients` in module config) |
+| `@InjectClient(ServiceClass)` | Injects a typed service proxy (auto-discovered from decorated classes) |
 
 | Injectable | Description |
 |---|---|
@@ -312,7 +311,6 @@ RestateModule.forRoot({
     ingress: 'http://restate:8080',           // Restate ingress URL
     endpoint: { port: 9080 },                 // HTTP/2 endpoint (see Endpoint Modes below)
     admin: 'http://restate:9070',             // Admin API (for auto-registration)
-    clients: [GreeterService, CounterObject], // Enable typed @InjectClient(T) proxies
     autoRegister: {                           // Auto-register deployment on startup
         deploymentUrl: 'http://host.docker.internal:9080',
         force: true,                          // Overwrite existing (default: true)

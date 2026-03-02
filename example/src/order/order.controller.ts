@@ -5,10 +5,10 @@ import {
     type ServiceClient,
     type WorkflowClient,
 } from "nestjs-restate";
-import { CartObject } from "./cart.object";
-import type { CartItem } from "./interfaces";
+import { CartObject } from "../cart/cart.object";
+import { PaymentService } from "../payment/payment.service";
+import type { CartItem } from "../shared/interfaces";
 import { OrderWorkflow } from "./order.workflow";
-import { PaymentService } from "./payment.service";
 
 /**
  * REST controller — exposes the Restate services as a standard HTTP API.

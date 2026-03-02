@@ -7,9 +7,9 @@ import {
     Shared,
     Workflow,
 } from "nestjs-restate";
-import { CartObject } from "./cart.object";
-import type { OrderRequest, OrderResult } from "./interfaces";
-import { PaymentService } from "./payment.service";
+import { CartObject } from "../cart/cart.object";
+import { PaymentService } from "../payment/payment.service";
+import type { OrderRequest, OrderResult } from "../shared/interfaces";
 
 /**
  * Durable order workflow — orchestrates payment + fulfillment.

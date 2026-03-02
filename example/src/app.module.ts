@@ -1,10 +1,8 @@
 import { Module } from "@nestjs/common";
 import { RestateModule } from "nestjs-restate";
-import { CartObject } from "./cart.object";
-import { OrderController } from "./order.controller";
-import { OrderWorkflow } from "./order.workflow";
-import { PaymentService } from "./payment.service";
-import { PaymentGateway } from "./payment-gateway";
+import { CartModule } from "./cart/cart.module";
+import { OrderModule } from "./order/order.module";
+import { PaymentModule } from "./payment/payment.module";
 
 @Module({
     imports: [
@@ -15,10 +13,10 @@ import { PaymentGateway } from "./payment-gateway";
             autoRegister: {
                 deploymentUrl: "http://host.docker.internal:9080",
             },
-            clients: [PaymentService, CartObject, OrderWorkflow],
         }),
+        PaymentModule,
+        CartModule,
+        OrderModule,
     ],
-    controllers: [OrderController],
-    providers: [PaymentService, CartObject, OrderWorkflow, PaymentGateway],
 })
 export class AppModule {}

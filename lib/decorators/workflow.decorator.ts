@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { registerComponent } from "../registry/component-registry";
 import { WORKFLOW_METADATA_KEY } from "../restate.constants";
 import type { WorkflowComponentMetadata, WorkflowDecoratorOptions } from "../restate.interfaces";
 
@@ -20,5 +21,6 @@ export function Workflow(nameOrOptions: WorkflowDecoratorOptions): ClassDecorato
     return (target) => {
         Injectable()(target as unknown as new (...args: any[]) => any);
         Reflect.defineMetadata(WORKFLOW_METADATA_KEY, meta, target);
+        registerComponent(target as unknown as new (...args: any[]) => any);
     };
 }
