@@ -1,8 +1,10 @@
 const tokenMap = new WeakMap<new (...args: any[]) => any, symbol>();
 
 export function getClientToken(target: new (...args: any[]) => any): symbol {
-    if (!tokenMap.has(target)) {
-        tokenMap.set(target, Symbol(`RestateClient:${target.name}`));
+    let token = tokenMap.get(target);
+    if (token === undefined) {
+        token = Symbol(`RestateClient:${target.name}`);
+        tokenMap.set(target, token);
     }
-    return tokenMap.get(target)!;
+    return token;
 }
