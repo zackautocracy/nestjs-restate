@@ -141,7 +141,7 @@ describe("RestateContext", () => {
         });
 
         it("should delegate get() with serde to SDK context", async () => {
-            const mockSerde = { serialize: vi.fn(), deserialize: vi.fn() };
+            const mockSerde = {} as any;
             const mockCtx = { get: vi.fn().mockResolvedValue(42) };
 
             const result = await runWithContext(mockCtx, () => ctx.get("count", mockSerde));
@@ -232,6 +232,17 @@ describe("RestateContext", () => {
             const result = runWithContext(mockCtx, () => ctx.raw);
 
             expect(result).toBe(mockCtx);
+        });
+    });
+
+    describe("console", () => {
+        it("should delegate console to SDK context", () => {
+            const mockConsole = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
+            const mockCtx = { console: mockConsole };
+
+            const result = runWithContext(mockCtx, () => ctx.console);
+
+            expect(result).toBe(mockConsole);
         });
     });
 
