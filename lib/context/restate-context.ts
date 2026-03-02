@@ -4,7 +4,11 @@ import type {
     ContextDate,
     DurablePromise,
     Duration,
+    GenericCall,
+    GenericSend,
+    InvocationHandle,
     InvocationId,
+    InvocationPromise,
     ObjectContext,
     ObjectSharedContext,
     Rand,
@@ -118,6 +122,18 @@ export class RestateContext {
             return this.ctx.attach(invocationId, serde);
         }
         return this.ctx.attach(invocationId);
+    }
+
+    // ── Generic calls (untyped service invocation) ──
+
+    genericCall<REQ = Uint8Array, RES = Uint8Array>(
+        call: GenericCall<REQ, RES>,
+    ): InvocationPromise<RES> {
+        return this.ctx.genericCall(call);
+    }
+
+    genericSend<REQ = Uint8Array>(call: GenericSend<REQ>): InvocationHandle {
+        return this.ctx.genericSend(call);
     }
 
     // ── Raw SDK context (escape hatch) ──

@@ -228,6 +228,35 @@ describe("RestateContext", () => {
         });
     });
 
+    describe("generic calls", () => {
+        it("should delegate genericCall() to SDK context", async () => {
+            const mockCtx = {
+                genericCall: vi.fn().mockResolvedValue("result"),
+            };
+            const call = { service: "svc", method: "m", parameter: {} };
+
+            const result = await runWithContext(mockCtx, () => ctx.genericCall(call as any));
+
+            expect(mockCtx.genericCall).toHaveBeenCalledWith(call);
+            expect(result).toBe("result");
+        });
+
+        it("should delegate genericSend() to SDK context", () => {
+            const mockHandle = {
+                invocationId: Promise.resolve("id"),
+            };
+            const mockCtx = {
+                genericSend: vi.fn().mockReturnValue(mockHandle),
+            };
+            const send = { service: "svc", method: "m", parameter: {} };
+
+            const result = runWithContext(mockCtx, () => ctx.genericSend(send as any));
+
+            expect(mockCtx.genericSend).toHaveBeenCalledWith(send);
+            expect(result).toBe(mockHandle);
+        });
+    });
+
     describe("singleton safety", () => {
         it("should use different contexts for concurrent invocations", async () => {
             const ctx1 = { key: "user-1" };
