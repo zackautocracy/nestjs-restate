@@ -50,8 +50,9 @@ export class RestateEndpointManager {
 
     async stop(): Promise<void> {
         if (this.httpServer) {
+            const server = this.httpServer;
             await new Promise<void>((resolve) => {
-                this.httpServer!.close(() => {
+                server.close(() => {
                     this.logger.log("Restate endpoint shut down");
                     resolve();
                 });
