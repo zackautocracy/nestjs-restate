@@ -1,11 +1,11 @@
-import type * as http2 from "node:http2";
+import type { Http2Server } from "node:http2";
 
 export interface RestateEndpointPortConfig {
     port: number;
 }
 
 export interface RestateEndpointServerConfig {
-    server: http2.Http2Server;
+    server: Http2Server;
 }
 
 export interface RestateEndpointLambdaConfig {

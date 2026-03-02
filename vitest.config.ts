@@ -22,7 +22,7 @@ export default defineConfig({
             provider: "istanbul",
             reporter: ["text", "lcov", "json-summary"],
             include: ["lib/**/*.ts"],
-            exclude: ["lib/**/index.ts"],
+            exclude: ["lib/**/index.ts", "lib/**/*.interfaces.ts"],
         },
     },
 });
