@@ -506,6 +506,10 @@ endpoint: { port: 0 },
 autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
 ```
 
+## Migrating from v1
+
+See [MIGRATION.md](MIGRATION.md) for a complete migration guide with before/after examples.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commands, and guidelines.
