@@ -2,12 +2,13 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
+<h1 align="center">nestjs-restate</h1>
+
 <p align="center">A first-class <a href="https://nestjs.com/">NestJS</a> integration for <a href="https://restate.dev/">Restate</a> — the durable execution engine.</p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/nestjs-restate"><img src="https://img.shields.io/npm/v/nestjs-restate.svg" alt="NPM Version" /></a>
   <a href="https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml"><img src="https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://codecov.io/gh/ZackAutocracy/nestjs-restate"><img src="https://codecov.io/gh/ZackAutocracy/nestjs-restate/branch/main/graph/badge.svg" alt="Coverage" /></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
 </p>
 
@@ -189,7 +190,7 @@ endpoint: { server: myHttp2Server }
 endpoint: { type: 'lambda' }
 ```
 
-> **Why a separate HTTP/2 server?** Restate communicates over HTTP/2 bidirectional streaming. Express/Fastify (used by NestJS) only support HTTP/1.1. The library runs a dedicated HTTP/2 server alongside your NestJS application.
+> **Why a separate HTTP/2 server?** Restate uses its own binary protocol over HTTP/2 bidirectional streaming. The Restate SDK provides a dedicated request handler that cannot be mounted as middleware in Express or Fastify. This library runs a dedicated HTTP/2 server alongside your NestJS application to serve the Restate protocol.
 
 ### Auto-Registration
 

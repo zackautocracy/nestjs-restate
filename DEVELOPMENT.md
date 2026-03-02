@@ -23,6 +23,7 @@ yarn install        # Install dependencies
 | `yarn lint:fix` | Auto-fix lint and formatting |
 | `yarn check:types` | Type-check with tsc |
 | `yarn check:all` | Run all checks (lint, types, build, test, exports, package) |
+| `yarn example:client` | Run SDK client against the example app |
 
 ## Running the Example App
 
@@ -42,6 +43,17 @@ yarn example
 Once running, the example registers itself with the Restate server automatically.
 
 ### Sending Requests
+
+The easiest way to interact with the example services is the SDK client script:
+
+```sh
+yarn example:client
+```
+
+This runs all three examples (counter, user session, signup workflow) using `@restatedev/restate-sdk-clients` and prints the results.
+
+<details>
+<summary>Or use curl</summary>
 
 **Counter service** (stateless RPC):
 
@@ -76,6 +88,8 @@ curl -X POST http://localhost:8080/signup/user-123/verifyEmail
 ```
 
 The workflow will block at the `ctx.promise("email-verified")` call until `verifyEmail` is invoked, demonstrating durable execution and signaling.
+
+</details>
 
 ### Stopping
 
