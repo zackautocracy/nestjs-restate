@@ -1,7 +1,6 @@
 import {
     HANDLER_METADATA_KEY,
     RESTATE_CLIENT,
-    RESTATE_ENDPOINT,
     RESTATE_OPTIONS,
     SERVICE_METADATA_KEY,
     VIRTUAL_OBJECT_METADATA_KEY,
@@ -12,9 +11,7 @@ describe("Restate Constants", () => {
     it("should export unique Symbol tokens", () => {
         expect(typeof RESTATE_CLIENT).toBe("symbol");
         expect(typeof RESTATE_OPTIONS).toBe("symbol");
-        expect(typeof RESTATE_ENDPOINT).toBe("symbol");
         expect(RESTATE_CLIENT).not.toBe(RESTATE_OPTIONS);
-        expect(RESTATE_CLIENT).not.toBe(RESTATE_ENDPOINT);
     });
 
     it("should export metadata keys as symbols", () => {
@@ -28,7 +25,6 @@ describe("Restate Constants", () => {
         const allSymbols = [
             RESTATE_CLIENT,
             RESTATE_OPTIONS,
-            RESTATE_ENDPOINT,
             WORKFLOW_METADATA_KEY,
             SERVICE_METADATA_KEY,
             VIRTUAL_OBJECT_METADATA_KEY,

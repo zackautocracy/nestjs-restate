@@ -1,5 +1,3 @@
-// Decorators
-
 // Re-export commonly used Restate SDK types for convenience
 export type {
     Context,
@@ -11,7 +9,7 @@ export type {
 export { Handler, InjectClient, Run, Service, Shared, VirtualObject, Workflow } from "./decorators";
 
 // Constants (for advanced usage)
-export { RESTATE_CLIENT, RESTATE_ENDPOINT } from "./restate.constants";
+export { RESTATE_CLIENT } from "./restate.constants";
 
 // Types
 export type {

@@ -87,9 +87,9 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
     }
 
     private async registerDeployment(): Promise<void> {
-        const endpointPort = "port" in this.options.endpoint ? this.options.endpoint.port : null;
+        const listeningPort = this.endpointManager.getListeningPort();
 
-        if (!endpointPort || !this.options.admin) {
+        if (listeningPort === null || !this.options.admin) {
             RestateModule.logger.warn(
                 "Auto-registration requires a port-based endpoint and admin URL",
             );
@@ -99,7 +99,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         try {
             const url = `${this.options.admin}/deployments`;
             const body = JSON.stringify({
-                uri: `http://host.docker.internal:${endpointPort}`,
+                uri: `http://host.docker.internal:${listeningPort}`,
                 force: true,
             });
 

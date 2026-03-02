@@ -1,4 +1,4 @@
-import type * as http2 from "node:http2";
+import * as http2 from "node:http2";
 import { Injectable, Logger } from "@nestjs/common";
 import * as restate from "@restatedev/restate-sdk";
 import type { EndpointConfig, RestateEndpointServerConfig } from "../restate.interfaces";
@@ -24,11 +24,12 @@ export class RestateEndpointManager {
             return;
         }
 
+        const handler = restate.createEndpointHandler({
+            services: this.definitions,
+        });
+
         if ("server" in config) {
             const serverConfig = config as RestateEndpointServerConfig;
-            const handler = restate.createEndpointHandler({
-                services: this.definitions,
-            });
             serverConfig.server.on("request", handler);
             this.httpServer = serverConfig.server;
             this.logger.log("Restate endpoint attached to existing HTTP/2 server");
@@ -36,10 +37,21 @@ export class RestateEndpointManager {
         }
 
         if ("port" in config) {
-            this.listeningPort = await restate.serve({
-                port: config.port,
-                services: this.definitions,
+            const server = http2.createServer();
+            server.on("request", handler);
+
+            await new Promise<void>((resolve, reject) => {
+                server.once("error", reject);
+                server.listen(config.port, () => {
+                    server.removeListener("error", reject);
+                    resolve();
+                });
             });
+
+            this.httpServer = server;
+            const addr = server.address();
+            this.listeningPort =
+                typeof addr === "object" && addr !== null ? addr.port : config.port;
             this.logger.log(`Restate endpoint listening on port ${this.listeningPort}`);
             return;
         }

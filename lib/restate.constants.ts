@@ -1,7 +1,6 @@
 // DI tokens
 export const RESTATE_CLIENT = Symbol("RestateClient");
 export const RESTATE_OPTIONS = Symbol("RestateOptions");
-export const RESTATE_ENDPOINT = Symbol("RestateEndpoint");
 
 // Metadata keys for decorators
 export const WORKFLOW_METADATA_KEY = Symbol("RestateWorkflow");
