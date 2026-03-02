@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { InjectClient } from "../../src/decorators/index";
+import { InjectClient } from "../../../src/decorators/index";
 
 describe("@InjectClient", () => {
     it("should create a parameter decorator without throwing", () => {

@@ -1,7 +1,7 @@
 import "reflect-metadata";
-import { Handler, Run, Shared } from "../../src/decorators/index";
-import { HANDLER_METADATA_KEY } from "../../src/restate.constants";
-import type { HandlerMetadata } from "../../src/restate.interfaces";
+import { Handler, Run, Shared } from "../../../src/decorators/index";
+import { HANDLER_METADATA_KEY } from "../../../src/restate.constants";
+import type { HandlerMetadata } from "../../../src/restate.interfaces";
 
 describe("Method Decorators", () => {
     describe("@Run", () => {

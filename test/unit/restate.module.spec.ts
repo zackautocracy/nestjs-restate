@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { Global, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { RESTATE_CLIENT, RESTATE_OPTIONS } from "../src/restate.constants";
-import { RestateModule } from "../src/restate.module";
+import { RESTATE_CLIENT, RESTATE_OPTIONS } from "../../src/restate.constants";
+import { RestateModule } from "../../src/restate.module";
 
 describe("RestateModule", () => {
     describe("forRoot", () => {

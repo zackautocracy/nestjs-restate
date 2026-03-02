@@ -1,9 +1,9 @@
 import "reflect-metadata";
-import { Handler, Run, Shared } from "../../src/decorators/handler.decorator";
-import { Service } from "../../src/decorators/service.decorator";
-import { VirtualObject } from "../../src/decorators/virtual-object.decorator";
-import { Workflow } from "../../src/decorators/workflow.decorator";
-import { RestateExplorer } from "../../src/discovery/restate.explorer";
+import { Handler, Run, Shared } from "../../../src/decorators/handler.decorator";
+import { Service } from "../../../src/decorators/service.decorator";
+import { VirtualObject } from "../../../src/decorators/virtual-object.decorator";
+import { Workflow } from "../../../src/decorators/workflow.decorator";
+import { RestateExplorer } from "../../../src/discovery/restate.explorer";
 
 function createMockDiscoveryService(instances: any[]) {
     return {

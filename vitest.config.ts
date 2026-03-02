@@ -10,7 +10,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: "node",
-        include: ["test/**/*.spec.ts"],
+        include: ["test/unit/**/*.spec.ts"],
         coverage: {
             provider: "istanbul",
             reporter: ["text", "lcov", "json-summary"],
