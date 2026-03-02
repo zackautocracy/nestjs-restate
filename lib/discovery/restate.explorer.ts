@@ -7,7 +7,12 @@ import {
     VIRTUAL_OBJECT_METADATA_KEY,
     WORKFLOW_METADATA_KEY,
 } from "../restate.constants";
-import type { ComponentMetadata, HandlerMetadata } from "../restate.interfaces";
+import type {
+    HandlerMetadata,
+    ServiceComponentMetadata,
+    VirtualObjectComponentMetadata,
+    WorkflowComponentMetadata,
+} from "../restate.interfaces";
 
 @Injectable()
 export class RestateExplorer {
@@ -24,13 +29,13 @@ export class RestateExplorer {
             if (!instance || !metatype) continue;
 
             const workflowMeta = Reflect.getMetadata(WORKFLOW_METADATA_KEY, metatype) as
-                | ComponentMetadata
+                | WorkflowComponentMetadata
                 | undefined;
             const serviceMeta = Reflect.getMetadata(SERVICE_METADATA_KEY, metatype) as
-                | ComponentMetadata
+                | ServiceComponentMetadata
                 | undefined;
             const virtualObjectMeta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, metatype) as
-                | ComponentMetadata
+                | VirtualObjectComponentMetadata
                 | undefined;
 
             if (workflowMeta) {
@@ -46,7 +51,7 @@ export class RestateExplorer {
         return definitions;
     }
 
-    private buildWorkflow(instance: any, meta: ComponentMetadata) {
+    private buildWorkflow(instance: any, meta: WorkflowComponentMetadata) {
         const handlers = this.getHandlerMetadata(instance);
         const runHandlers = handlers.filter((h) => h.type === "run");
         const sharedHandlers = handlers.filter((h) => h.type === "shared");
@@ -57,14 +62,20 @@ export class RestateExplorer {
             );
         }
 
+        const runHandler = runHandlers[0];
+        const runFn = instance[runHandler.methodName].bind(instance);
+
         const handlerMap: Record<string, any> = {
-            run: instance[runHandlers[0].methodName].bind(instance),
+            run: runHandler.options
+                ? restate.handlers.workflow.workflow(runHandler.options, runFn)
+                : runFn,
         };
 
         for (const h of sharedHandlers) {
-            handlerMap[h.methodName] = restate.createWorkflowSharedHandler(
-                instance[h.methodName].bind(instance),
-            );
+            const fn = instance[h.methodName].bind(instance);
+            handlerMap[h.methodName] = h.options
+                ? restate.handlers.workflow.shared(h.options, fn)
+                : restate.createWorkflowSharedHandler(fn);
         }
 
         this.logger.log(
@@ -74,10 +85,13 @@ export class RestateExplorer {
         return restate.workflow({
             name: meta.name,
             handlers: handlerMap as any,
+            description: meta.description,
+            metadata: meta.metadata,
+            options: meta.options,
         });
     }
 
-    private buildService(instance: any, meta: ComponentMetadata) {
+    private buildService(instance: any, meta: ServiceComponentMetadata) {
         const handlers = this.getHandlerMetadata(instance);
         const handlerMethods = handlers.filter((h) => h.type === "handler");
 
@@ -89,7 +103,8 @@ export class RestateExplorer {
 
         const handlerMap: Record<string, any> = {};
         for (const h of handlerMethods) {
-            handlerMap[h.methodName] = instance[h.methodName].bind(instance);
+            const fn = instance[h.methodName].bind(instance);
+            handlerMap[h.methodName] = h.options ? restate.handlers.handler(h.options, fn) : fn;
         }
 
         this.logger.log(
@@ -99,10 +114,13 @@ export class RestateExplorer {
         return restate.service({
             name: meta.name,
             handlers: handlerMap,
+            description: meta.description,
+            metadata: meta.metadata,
+            options: meta.options,
         });
     }
 
-    private buildVirtualObject(instance: any, meta: ComponentMetadata) {
+    private buildVirtualObject(instance: any, meta: VirtualObjectComponentMetadata) {
         const handlers = this.getHandlerMetadata(instance);
         const exclusiveHandlers = handlers.filter((h) => h.type === "handler");
         const sharedHandlers = handlers.filter((h) => h.type === "shared");
@@ -116,13 +134,17 @@ export class RestateExplorer {
         const handlerMap: Record<string, any> = {};
 
         for (const h of exclusiveHandlers) {
-            handlerMap[h.methodName] = instance[h.methodName].bind(instance);
+            const fn = instance[h.methodName].bind(instance);
+            handlerMap[h.methodName] = h.options
+                ? restate.handlers.object.exclusive(h.options, fn)
+                : fn;
         }
 
         for (const h of sharedHandlers) {
-            handlerMap[h.methodName] = restate.createObjectSharedHandler(
-                instance[h.methodName].bind(instance),
-            );
+            const fn = instance[h.methodName].bind(instance);
+            handlerMap[h.methodName] = h.options
+                ? restate.handlers.object.shared(h.options, fn)
+                : restate.createObjectSharedHandler(fn);
         }
 
         this.logger.log(
@@ -132,6 +154,9 @@ export class RestateExplorer {
         return restate.object({
             name: meta.name,
             handlers: handlerMap as any,
+            description: meta.description,
+            metadata: meta.metadata,
+            options: meta.options,
         });
     }
 

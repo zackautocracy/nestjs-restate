@@ -23,6 +23,28 @@ describe("Class Decorators", () => {
             const injectable = Reflect.getMetadata("__injectable__", TestWorkflow);
             expect(injectable).toBe(true);
         });
+
+        it("should accept full options object with workflowRetention", () => {
+            @Workflow({
+                name: "signup",
+                description: "User signup flow",
+                metadata: { version: "1" },
+                options: {
+                    workflowRetention: 7 * 24 * 60 * 60 * 1000,
+                    retryPolicy: { maxAttempts: 3 },
+                    enableLazyState: true,
+                },
+            })
+            class SignupWorkflow {}
+
+            const meta = Reflect.getMetadata(WORKFLOW_METADATA_KEY, SignupWorkflow);
+            expect(meta.name).toBe("signup");
+            expect(meta.description).toBe("User signup flow");
+            expect(meta.metadata).toEqual({ version: "1" });
+            expect(meta.options?.workflowRetention).toBe(604800000);
+            expect(meta.options?.retryPolicy?.maxAttempts).toBe(3);
+            expect(meta.options?.enableLazyState).toBe(true);
+        });
     });
 
     describe("@Service", () => {
@@ -41,6 +63,32 @@ describe("Class Decorators", () => {
             const injectable = Reflect.getMetadata("__injectable__", TestService);
             expect(injectable).toBe(true);
         });
+
+        it("should accept full options object with retryPolicy", () => {
+            @Service({
+                name: "payments",
+                description: "Payment processing",
+                options: {
+                    retryPolicy: {
+                        maxAttempts: 5,
+                        initialInterval: 200,
+                        maxInterval: 10_000,
+                        exponentiationFactor: 2,
+                    },
+                    inactivityTimeout: 30_000,
+                    abortTimeout: 60_000,
+                    ingressPrivate: true,
+                },
+            })
+            class PaymentService {}
+
+            const meta = Reflect.getMetadata(SERVICE_METADATA_KEY, PaymentService);
+            expect(meta.name).toBe("payments");
+            expect(meta.description).toBe("Payment processing");
+            expect(meta.options?.retryPolicy?.maxAttempts).toBe(5);
+            expect(meta.options?.inactivityTimeout).toBe(30_000);
+            expect(meta.options?.ingressPrivate).toBe(true);
+        });
     });
 
     describe("@VirtualObject", () => {
@@ -58,6 +106,24 @@ describe("Class Decorators", () => {
 
             const injectable = Reflect.getMetadata("__injectable__", TestObject);
             expect(injectable).toBe(true);
+        });
+
+        it("should accept full options object with enableLazyState", () => {
+            @VirtualObject({
+                name: "cart",
+                metadata: { team: "commerce" },
+                options: {
+                    enableLazyState: true,
+                    retryPolicy: { maxAttempts: 10, onMaxAttempts: "pause" },
+                },
+            })
+            class CartObject {}
+
+            const meta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, CartObject);
+            expect(meta.name).toBe("cart");
+            expect(meta.metadata).toEqual({ team: "commerce" });
+            expect(meta.options?.enableLazyState).toBe(true);
+            expect(meta.options?.retryPolicy?.onMaxAttempts).toBe("pause");
         });
     });
 });

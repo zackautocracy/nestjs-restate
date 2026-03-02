@@ -13,32 +13,20 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
 </p>
 
-## Description
+## Overview
 
-Define workflows, services, and virtual objects as regular NestJS injectable classes with decorators, getting full dependency injection, auto-discovery, and lifecycle management out of the box.
+Define Restate workflows, services, and virtual objects as regular NestJS injectable classes. Full dependency injection, auto-discovery, and lifecycle management — no manual wiring required.
 
-## Features
-
-- **Full NestJS Dependency Injection** — constructor injection works exactly like `@Controller()` or any other NestJS provider
-- **Decorator-based API** — `@Workflow()`, `@Service()`, `@VirtualObject()` class decorators, `@Run()`, `@Handler()`, `@Shared()` method decorators
-- **Auto-discovery** — no manual registration needed; decorated classes are found automatically via NestJS `DiscoveryService`
-- **HTTP/2 lifecycle management** — the Restate endpoint starts on module init and gracefully shuts down on destroy
-- **Async configuration** — `forRootAsync()` supports `ConfigService` and any other async factory patterns
+- **Decorator-driven** — `@Workflow()`, `@Service()`, `@VirtualObject()`, `@Handler()`, `@Run()`, `@Shared()`
+- **Full DI support** — constructor injection works like any NestJS provider
+- **Auto-discovery** — decorated classes are registered automatically, no manual wiring
+- **SDK configuration passthrough** — retry policies, timeouts, and handler options forwarded to the Restate SDK
 - **Multiple endpoint modes** — standalone port, external HTTP/2 server, or AWS Lambda
-- **Auto-registration** — optionally registers the deployment with the Restate server on startup
-- **Zero wrapping of Restate context** — handler methods receive real `WorkflowContext`, `ObjectContext`, etc. from the SDK
 
 ## Installation
 
 ```bash
-# npm
 npm install nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clients
-
-# yarn
-yarn add nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clients
-
-# pnpm
-pnpm add nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clients
 ```
 
 ### Peer Dependencies
@@ -49,8 +37,6 @@ pnpm add nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clients
 | `@nestjs/core` | `>=10.0.0` |
 | `@restatedev/restate-sdk` | `>=1.6.0` |
 | `@restatedev/restate-sdk-clients` | `>=1.6.0` |
-| `reflect-metadata` | `>=0.1.0` |
-| `rxjs` | `>=7.0.0` |
 
 ## Quick Start
 
@@ -71,50 +57,33 @@ import { RestateModule } from 'nestjs-restate';
 export class AppModule {}
 ```
 
-### 2. Define a workflow
+### 2. Define a component
 
 ```typescript
-import { Workflow, Run, Shared } from 'nestjs-restate';
-import type { WorkflowContext, WorkflowSharedContext } from 'nestjs-restate';
+import { Service, Handler } from 'nestjs-restate';
+import type { Context } from '@restatedev/restate-sdk';
 
-@Workflow('payment')
-export class PaymentWorkflow {
-    constructor(private readonly paymentService: PaymentService) {}
-
-    @Run()
-    async run(ctx: WorkflowContext, input: { orderId: string; amount: number }) {
-        const intentId = await ctx.run('create-intent', () =>
-            this.paymentService.createIntent(input.orderId, input.amount),
-        );
-
-        const confirmation = await ctx.promise<string>('payment-confirmed');
-
-        await ctx.run('finalize', () =>
-            this.paymentService.finalize(intentId, confirmation),
-        );
-
-        return { success: true, intentId };
-    }
-
-    @Shared()
-    async confirmPayment(ctx: WorkflowSharedContext, input: { confirmationId: string }) {
-        ctx.promise<string>('payment-confirmed').resolve(input.confirmationId);
+@Service('greeter')
+export class GreeterService {
+    @Handler()
+    async greet(ctx: Context, name: string) {
+        return await ctx.run('greeting', () => `Hello, ${name}!`);
     }
 }
 ```
 
-### 3. Register it as a provider
-
-Add the workflow to any module's `providers` array — auto-discovery handles the rest:
+### 3. Register as a provider
 
 ```typescript
 @Module({
-    providers: [PaymentWorkflow, PaymentService],
+    providers: [GreeterService],
 })
-export class PaymentModule {}
+export class GreeterModule {}
 ```
 
-### 4. Call it from your application
+Auto-discovery handles the rest — no manual registration with the Restate endpoint needed.
+
+### 4. Call it
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -122,174 +91,111 @@ import { InjectClient } from 'nestjs-restate';
 import type { Ingress } from '@restatedev/restate-sdk-clients';
 
 @Injectable()
-export class OrderService {
+export class AppService {
     constructor(@InjectClient() private readonly restate: Ingress) {}
 
-    async placeOrder(orderId: string, amount: number) {
-        const client = this.restate.workflowClient<PaymentWorkflow>(
-            { name: 'payment' },
-            orderId,
-        );
-        await client.workflowSubmit({ orderId, amount });
-    }
-
-    async confirmPayment(orderId: string, confirmationId: string) {
-        const client = this.restate.workflowClient<PaymentWorkflow>(
-            { name: 'payment' },
-            orderId,
-        );
-        await client.confirmPayment({ confirmationId });
+    async greet(name: string) {
+        const client = this.restate.serviceClient<GreeterService>({ name: 'greeter' });
+        return client.greet(name);
     }
 }
-```
-
-## Module Configuration
-
-### `forRoot()`
-
-```typescript
-RestateModule.forRoot({
-    ingress: 'http://restate:8080',      // Required: Restate server ingress URL
-    endpoint: { port: 9080 },            // Required: HTTP/2 endpoint configuration
-    admin: 'http://restate:9070',         // Optional: Restate admin URL
-    autoRegister: {                       // Optional: Auto-register on startup
-        deploymentUrl: 'http://host.docker.internal:9080',
-    },
-})
-```
-
-### `forRootAsync()`
-
-```typescript
-import { ConfigService } from '@nestjs/config';
-
-RestateModule.forRootAsync({
-    inject: [ConfigService],
-    useFactory: (config: ConfigService) => ({
-        ingress: config.getOrThrow('RESTATE_INGRESS_URL'),
-        admin: config.get('RESTATE_ADMIN_URL'),
-        endpoint: {
-            port: parseInt(config.getOrThrow('RESTATE_ENDPOINT_PORT'), 10),
-        },
-        autoRegister: config.get('NODE_ENV') === 'development'
-            ? { deploymentUrl: `http://host.docker.internal:${config.getOrThrow('RESTATE_ENDPOINT_PORT')}` }
-            : undefined,
-    }),
-})
-```
-
-### Endpoint Modes
-
-```typescript
-// Standalone: creates and manages an HTTP/2 server
-endpoint: { port: 9080 }
-
-// External server: attach to an existing HTTP/2 server
-endpoint: { server: myHttp2Server }
-
-// Lambda: serverless mode (no server created)
-endpoint: { type: 'lambda' }
-```
-
-> **Why a separate HTTP/2 server?** Restate uses its own binary protocol over HTTP/2 bidirectional streaming. The Restate SDK provides a dedicated request handler that cannot be mounted as middleware in Express or Fastify. This library runs a dedicated HTTP/2 server alongside your NestJS application to serve the Restate protocol.
-
-### Auto-Registration
-
-When `autoRegister` is set, the module registers the deployment with the Restate admin API on startup. This is useful during development so you don't need to manually `curl` the admin endpoint.
-
-```typescript
-autoRegister: {
-    deploymentUrl: 'http://host.docker.internal:9080',  // Where Restate can reach your service
-    force: true,                                         // Overwrite existing deployments (default)
-}
-```
-
-The `deploymentUrl` depends on your environment:
-
-| Environment | `deploymentUrl` |
-|---|---|
-| Docker Desktop | `http://host.docker.internal:9080` |
-| Local (no Docker) | `http://localhost:9080` |
-| Kubernetes | `http://my-service.default:9080` |
-| Docker-in-Docker / CI | `http://<container-ip>:9080` |
-
-When using random ports (`port: 0`), use the `{{port}}` placeholder:
-
-```typescript
-endpoint: { port: 0 },
-autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
 ```
 
 ## Decorators
 
-### Class Decorators
-
-All class decorators implicitly apply `@Injectable()`, so you never need both.
+All class decorators implicitly apply `@Injectable()`.
 
 | Decorator | Description |
 |---|---|
-| `@Workflow(name)` | Registers a [Restate Workflow](https://docs.restate.dev/develop/ts/workflows/) |
-| `@Service(name)` | Registers a [Restate Service](https://docs.restate.dev/develop/ts/overview/#services) |
-| `@VirtualObject(name)` | Registers a [Restate Virtual Object](https://docs.restate.dev/develop/ts/virtual-objects/) |
-
-### Method Decorators
-
-| Decorator | Description |
-|---|---|
-| `@Run()` | Main entry point of a `@Workflow` (exactly one per workflow) |
-| `@Handler()` | Handler method on `@Service` or exclusive handler on `@VirtualObject` |
+| `@Service(name)` | [Restate Service](https://docs.restate.dev/develop/ts/overview/#services) — stateless durable handlers |
+| `@VirtualObject(name)` | [Restate Virtual Object](https://docs.restate.dev/develop/ts/virtual-objects/) — keyed stateful handlers |
+| `@Workflow(name)` | [Restate Workflow](https://docs.restate.dev/develop/ts/workflows/) — long-running durable process |
+| `@Handler()` | Handler method on `@Service`, or exclusive handler on `@VirtualObject` |
 | `@Shared()` | Concurrent handler on `@Workflow` or `@VirtualObject` |
+| `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
+| `@InjectClient()` | Injects the Restate `Ingress` client |
 
-### Injection Decorators
-
-| Decorator | Description |
-|---|---|
-| `@InjectClient()` | Injects the Restate `Ingress` client for calling workflows/services |
+All decorators also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
 
 ## Services
 
-Services are stateless handlers with durable execution and automatic retries.
+Services are stateless handlers with durable execution. Each call is retried automatically on failure and runs exactly once to completion. Services are ideal for side effects like sending emails, charging payments, or calling external APIs.
 
 ```typescript
+import { Service, Handler } from 'nestjs-restate';
+import type { Context } from '@restatedev/restate-sdk';
+
 @Service('notification')
 export class NotificationService {
-    constructor(private readonly sms: SmsProvider) {}
+    constructor(
+        private readonly sms: SmsProvider,
+        private readonly mailer: MailProvider,
+    ) {}
 
     @Handler()
     async sendSms(ctx: Context, input: { phone: string; message: string }) {
+        // ctx.run() makes this side effect durable — it won't re-execute on retry
         await ctx.run('send-sms', () =>
             this.sms.send(input.phone, input.message),
+        );
+    }
+
+    @Handler()
+    async sendEmail(ctx: Context, input: { to: string; subject: string; body: string }) {
+        await ctx.run('send-email', () =>
+            this.mailer.send(input.to, input.subject, input.body),
         );
     }
 }
 ```
 
-## Virtual Objects
-
-Virtual Objects combine state and concurrency control, identified by a key.
+Call a service from elsewhere in your NestJS app:
 
 ```typescript
+const client = this.restate.serviceClient<NotificationService>({ name: 'notification' });
+await client.sendSms({ phone: '+1234567890', message: 'Order shipped!' });
+```
+
+## Virtual Objects
+
+Virtual Objects combine durable state with concurrency control. Each object instance is identified by a key, and `@Handler()` methods run with exclusive access (one at a time per key). `@Shared()` methods can run concurrently.
+
+```typescript
+import { VirtualObject, Handler, Shared } from 'nestjs-restate';
+import type { ObjectContext, ObjectSharedContext } from '@restatedev/restate-sdk';
+
 @VirtualObject('counter')
 export class CounterObject {
-    @Handler()
+    @Handler() // exclusive — only one increment runs at a time per key
     async increment(ctx: ObjectContext, input: { amount: number }) {
         const current = (await ctx.get<number>('count')) ?? 0;
         ctx.set('count', current + input.amount);
         return current + input.amount;
     }
 
-    @Shared()
+    @Shared() // concurrent — multiple reads can run in parallel
     async getCount(ctx: ObjectSharedContext) {
         return (await ctx.get<number>('count')) ?? 0;
     }
 }
 ```
 
-## Workflows
-
-Workflows are durable, long-running processes with a single `@Run()` entry point. They support durable promises and shared handlers for external signals.
+Call a virtual object:
 
 ```typescript
+const client = this.restate.objectClient<CounterObject>({ name: 'counter' }, 'user-123');
+await client.increment({ amount: 1 });
+const count = await client.getCount();
+```
+
+## Workflows
+
+Workflows are durable, long-running processes with a single `@Run()` entry point. They can suspend on durable promises and receive external signals through `@Shared()` handlers.
+
+```typescript
+import { Workflow, Run, Shared } from 'nestjs-restate';
+import type { WorkflowContext, WorkflowSharedContext } from '@restatedev/restate-sdk';
+
 @Workflow('payment')
 export class PaymentWorkflow {
     constructor(private readonly payments: PaymentService) {}
@@ -318,59 +224,151 @@ export class PaymentWorkflow {
 ```
 
 **Key rules:**
-- Exactly **one** `@Run()` method per workflow (the main entry point)
+- Exactly **one** `@Run()` per workflow
 - `@Shared()` methods can be called concurrently while the workflow is running
-- Use `ctx.promise()` for durable signals between the run and shared handlers
+- Use `ctx.promise()` for durable signals between run and shared handlers
 
-### Calling a Workflow
+Call a workflow:
 
 ```typescript
-@Injectable()
+const client = this.restate.workflowClient<PaymentWorkflow>({ name: 'payment' }, orderId);
+
+// Start (non-blocking)
+await client.workflowSubmit({ orderId, amount });
+
+// Wait for result
+const result = await client.workflowAttach();
+
+// Signal the running workflow
+await client.confirmPayment({ confirmationId });
+```
+
+## Configuration
+
+### Module Options
+
+```typescript
+RestateModule.forRoot({
+    ingress: 'http://restate:8080',           // Restate ingress URL
+    endpoint: { port: 9080 },                 // HTTP/2 endpoint (see Endpoint Modes below)
+    admin: 'http://restate:9070',             // Admin API (for auto-registration)
+    autoRegister: {                           // Auto-register deployment on startup
+        deploymentUrl: 'http://host.docker.internal:9080',
+        force: true,                          // Overwrite existing (default: true)
+    },
+    identityKeys: [                           // Request identity verification keys
+        'publickeyv1_...',
+    ],
+    defaultServiceOptions: {                  // Defaults applied to all components
+        retryPolicy: {
+            maxAttempts: 10,
+            initialInterval: 100,
+            exponentiationFactor: 2,
+            maxInterval: 30_000,
+        },
+    },
+})
+```
+
+### Async Configuration
+
+```typescript
+import { ConfigService } from '@nestjs/config';
+
+RestateModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+        ingress: config.getOrThrow('RESTATE_INGRESS_URL'),
+        admin: config.get('RESTATE_ADMIN_URL'),
+        endpoint: {
+            port: parseInt(config.getOrThrow('RESTATE_ENDPOINT_PORT'), 10),
+        },
+    }),
+})
+```
+
+### Endpoint Modes
+
+```typescript
+endpoint: { port: 9080 }           // Standalone HTTP/2 server
+endpoint: { server: myHttp2Server } // Attach to existing server
+endpoint: { type: 'lambda' }       // AWS Lambda (no server)
+```
+
+> **Why a separate HTTP/2 server?** Restate uses a binary protocol over HTTP/2 bidirectional streaming that can't be mounted as Express/Fastify middleware.
+
+### Component-Level Options
+
+Decorators accept either a string name or an options object for fine-grained SDK configuration:
+
+```typescript
+@Service({
+    name: 'payments',
+    description: 'Payment processing service',
+    metadata: { team: 'billing' },
+    options: {
+        retryPolicy: { maxAttempts: 5, initialInterval: 200 },
+        inactivityTimeout: 30_000,
+        ingressPrivate: true,
+    },
+})
+export class PaymentService { ... }
+
+@VirtualObject({
+    name: 'cart',
+    options: {
+        enableLazyState: true,
+        retryPolicy: { maxAttempts: 10 },
+    },
+})
+export class CartObject { ... }
+
+@Workflow({
+    name: 'onboarding',
+    options: {
+        workflowRetention: 7 * 24 * 60 * 60 * 1000, // 7 days
+        retryPolicy: { maxAttempts: 3 },
+    },
+})
+export class OnboardingWorkflow { ... }
+```
+
+### Handler-Level Options
+
+Individual handlers can override component-level settings:
+
+```typescript
+@Service('orders')
 export class OrderService {
-    constructor(@InjectClient() private readonly restate: Ingress) {}
+    @Handler({ retryPolicy: { maxAttempts: 1 } }) // no retries for idempotent ops
+    async cancelOrder(ctx: Context, orderId: string) { ... }
 
-    async placeOrder(orderId: string, amount: number) {
-        const client = this.restate.workflowClient<PaymentWorkflow>(
-            { name: 'payment' },
-            orderId,
-        );
-
-        // Start the workflow (non-blocking)
-        await client.workflowSubmit({ orderId, amount });
-
-        // Or attach to the running workflow and wait for the result
-        const result = await client.workflowAttach();
-    }
-
-    async confirmPayment(orderId: string, confirmationId: string) {
-        const client = this.restate.workflowClient<PaymentWorkflow>(
-            { name: 'payment' },
-            orderId,
-        );
-
-        // Signal the running workflow via a shared handler
-        await client.confirmPayment({ confirmationId });
-    }
+    @Handler({ inactivityTimeout: 60_000 }) // long timeout for slow operations
+    async processReturn(ctx: Context, input: ReturnRequest) { ... }
 }
+```
+
+All SDK option types (`RetryPolicy`, `ServiceOptions`, `ObjectOptions`, `WorkflowOptions`, `ServiceHandlerOpts`, `DefaultServiceOptions`, etc.) are re-exported from `nestjs-restate` for convenience.
+
+### Auto-Registration
+
+When `autoRegister` is set, the module calls the Restate admin API on startup to register the deployment.
+
+| Environment | `deploymentUrl` |
+|---|---|
+| Docker Desktop | `http://host.docker.internal:9080` |
+| Local (no Docker) | `http://localhost:9080` |
+| Kubernetes | `http://my-service.default:9080` |
+
+Use `{{port}}` for random port scenarios:
+```typescript
+endpoint: { port: 0 },
+autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
 ```
 
 ## Contributing
 
-Contributions are welcome! This project uses [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
-
-```bash
-# Install dependencies
-yarn install
-
-# Run tests
-yarn test
-
-# Lint
-yarn lint
-
-# Full quality check
-yarn check:all
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commands, and guidelines.
 
 ## License
 

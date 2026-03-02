@@ -226,4 +226,96 @@ describe("RestateModule", () => {
             await app.close();
         });
     });
+
+    describe("endpoint configuration", () => {
+        it("should forward defaultServiceOptions to endpoint manager", async () => {
+            @Service("config-svc")
+            class ConfigSvc {
+                @Handler()
+                async handle() {
+                    return "ok";
+                }
+            }
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 0 },
+                        defaultServiceOptions: {
+                            retryPolicy: { maxAttempts: 5 },
+                        },
+                    }),
+                ],
+                providers: [ConfigSvc],
+            }).compile();
+
+            const options = module.get(RESTATE_OPTIONS);
+            expect(options.defaultServiceOptions).toEqual({
+                retryPolicy: { maxAttempts: 5 },
+            });
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            // Verify the endpoint started (port was assigned)
+            const endpointManager = module.get(RestateEndpointManager);
+            expect(endpointManager.getListeningPort()).toBeGreaterThan(0);
+
+            await app.close();
+        });
+
+        it("should accept defaultServiceOptions via forRootAsync", async () => {
+            @Service("async-config-svc")
+            class AsyncConfigSvc {
+                @Handler()
+                async handle() {
+                    return "ok";
+                }
+            }
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRootAsync({
+                        useFactory: () => ({
+                            ingress: "http://localhost:8080",
+                            endpoint: { port: 0 },
+                            defaultServiceOptions: {
+                                retryPolicy: { maxAttempts: 10 },
+                            },
+                        }),
+                    }),
+                ],
+                providers: [AsyncConfigSvc],
+            }).compile();
+
+            const options = module.get(RESTATE_OPTIONS);
+            expect(options.defaultServiceOptions?.retryPolicy?.maxAttempts).toBe(10);
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const endpointManager = module.get(RestateEndpointManager);
+            expect(endpointManager.getListeningPort()).toBeGreaterThan(0);
+
+            await app.close();
+        });
+
+        it("should store identityKeys in module options", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 9080 },
+                        identityKeys: ["publickeyv1_somekey"],
+                    }),
+                ],
+            }).compile();
+
+            const options = module.get(RESTATE_OPTIONS);
+            expect(options.identityKeys).toEqual(["publickeyv1_somekey"]);
+
+            await module.close();
+        });
+    });
 });

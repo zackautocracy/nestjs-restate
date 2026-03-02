@@ -1,5 +1,6 @@
 import * as http2 from "node:http2";
 import { Injectable, Logger } from "@nestjs/common";
+import type { DefaultServiceOptions } from "@restatedev/restate-sdk";
 import * as restate from "@restatedev/restate-sdk";
 import type { EndpointConfig, RestateEndpointServerConfig } from "../restate.interfaces";
 
@@ -23,7 +24,13 @@ export class RestateEndpointManager {
         return this.definitions;
     }
 
-    async start(config: EndpointConfig): Promise<void> {
+    async start(
+        config: EndpointConfig,
+        endpointOptions?: {
+            identityKeys?: string[];
+            defaultServiceOptions?: DefaultServiceOptions;
+        },
+    ): Promise<void> {
         if (this.endpointHandler || this.httpServer) {
             throw new Error("Restate endpoint already started. Call stop() before start().");
         }
@@ -35,6 +42,8 @@ export class RestateEndpointManager {
 
         const handler = restate.createEndpointHandler({
             services: this.definitions,
+            identityKeys: endpointOptions?.identityKeys,
+            defaultServiceOptions: endpointOptions?.defaultServiceOptions,
         });
         this.endpointHandler = handler;
 
