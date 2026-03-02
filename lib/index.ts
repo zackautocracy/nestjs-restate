@@ -10,6 +10,8 @@ export type {
     ObjectOptions,
     ObjectSharedContext,
     RetryPolicy,
+    RunAction,
+    RunOptions,
     ServiceHandlerOpts,
     ServiceOptions,
     WorkflowContext,

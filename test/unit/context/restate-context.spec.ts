@@ -25,6 +25,29 @@ describe("RestateContext", () => {
             expect(result).toBe("result");
         });
 
+        it("should delegate run() with action only (nameless)", async () => {
+            const mockRun = vi.fn().mockResolvedValue("result");
+            const mockCtx = { run: mockRun };
+
+            const result = await runWithContext(mockCtx, () => ctx.run(() => "result"));
+
+            expect(mockRun).toHaveBeenCalledWith(expect.any(Function));
+            expect(result).toBe("result");
+        });
+
+        it("should delegate run() with name, action, and options", async () => {
+            const mockRun = vi.fn().mockResolvedValue("result");
+            const mockCtx = { run: mockRun };
+            const options = { maxRetryAttempts: 3 };
+
+            const result = await runWithContext(mockCtx, () =>
+                ctx.run("step", () => "result", options),
+            );
+
+            expect(mockRun).toHaveBeenCalledWith("step", expect.any(Function), options);
+            expect(result).toBe("result");
+        });
+
         it("should delegate sleep() to SDK context", async () => {
             const mockSleep = vi.fn().mockResolvedValue(undefined);
             const mockCtx = { sleep: mockSleep };

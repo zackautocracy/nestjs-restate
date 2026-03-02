@@ -6,6 +6,9 @@ import type {
     ObjectContext,
     ObjectSharedContext,
     Rand,
+    RestatePromise,
+    RunAction,
+    RunOptions,
     WorkflowContext,
     WorkflowSharedContext,
 } from "@restatedev/restate-sdk";
@@ -19,8 +22,11 @@ export class RestateContext {
 
     // ── Durable execution ──
 
-    run<T>(name: string, fn: () => T | Promise<T>): Promise<T> {
-        return this.ctx.run(name, fn);
+    run<T>(action: RunAction<T>): RestatePromise<T>;
+    run<T>(name: string, action: RunAction<T>): RestatePromise<T>;
+    run<T>(name: string, action: RunAction<T>, options: RunOptions<T>): RestatePromise<T>;
+    run<T>(...args: unknown[]): RestatePromise<T> {
+        return this.ctx.run(...args);
     }
 
     sleep(duration: Duration): Promise<void> {
