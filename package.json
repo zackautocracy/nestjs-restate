@@ -61,6 +61,27 @@
         "@restatedev/restate-sdk-clients": ">=1.6.0",
         "reflect-metadata": ">=0.1.13"
     },
-    "devDependencies": {},
+    "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.2",
+        "@biomejs/biome": "^2.4.4",
+        "@commitlint/cli": "^20.4.2",
+        "@commitlint/config-conventional": "^20.4.2",
+        "@nestjs/common": "^11.1.14",
+        "@nestjs/core": "^11.1.14",
+        "@nestjs/testing": "^11.1.14",
+        "@restatedev/restate-sdk": "^1.10.4",
+        "@restatedev/restate-sdk-clients": "^1.10.4",
+        "@types/node": "^25.3.3",
+        "@vitest/coverage-istanbul": "^4.0.18",
+        "husky": "^9.1.7",
+        "knip": "^5.85.0",
+        "lint-staged": "^16.3.1",
+        "publint": "^0.3.18",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.2",
+        "tsdown": "^0.21.0-beta.2",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18"
+    },
     "packageManager": "yarn@4.12.0"
 }
