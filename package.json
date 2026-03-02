@@ -1,90 +1,94 @@
 {
-  "name": "nestjs-restate",
-  "version": "0.0.0",
-  "description": "First-class NestJS integration for Restate durable execution engine",
-  "license": "MIT",
-  "author": "Zakaria O.I.A <codeautocracy@gmail.com>",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ZackAutocracy/nestjs-restate"
-  },
-  "keywords": [
-    "nestjs",
-    "restate",
-    "durable-execution",
-    "workflow",
-    "virtual-object",
-    "service",
-    "decorator",
-    "dependency-injection"
-  ],
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
+    "name": "nestjs-restate",
+    "version": "0.0.0",
+    "description": "First-class NestJS integration for Restate durable execution engine",
+    "license": "MIT",
+    "author": "Zakaria O.I.A <codeautocracy@gmail.com>",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ZackAutocracy/nestjs-restate"
+    },
+    "keywords": [
+        "nestjs",
+        "restate",
+        "durable-execution",
+        "workflow",
+        "virtual-object",
+        "service",
+        "decorator",
+        "dependency-injection"
+    ],
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.mts",
+                "default": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        }
+    },
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "scripts": {
+        "build": "tsdown",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "lint": "biome check .",
+        "lint:fix": "biome check --write .",
+        "format": "biome format --write .",
+        "check:types": "tsc --noEmit",
+        "check:exports": "attw --pack .",
+        "check:package": "publint",
+        "check:unused": "knip",
+        "check:all": "yarn lint && yarn check:types && yarn build && yarn test && yarn check:exports && yarn check:package && yarn check:unused",
+        "prepare": "husky"
+    },
+    "peerDependencies": {
+        "@nestjs/common": ">=10.0.0",
+        "@nestjs/core": ">=10.0.0",
+        "@restatedev/restate-sdk": ">=1.6.0",
+        "@restatedev/restate-sdk-clients": ">=1.6.0",
+        "reflect-metadata": ">=0.1.13"
+    },
+    "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.2",
+        "@biomejs/biome": "^2.4.4",
+        "@commitlint/cli": "^20.4.2",
+        "@commitlint/config-conventional": "^20.4.2",
+        "@nestjs/common": "^11.1.14",
+        "@nestjs/core": "^11.1.14",
+        "@nestjs/testing": "^11.1.14",
+        "@restatedev/restate-sdk": "^1.10.4",
+        "@restatedev/restate-sdk-clients": "^1.10.4",
+        "@swc/core": "^1.15.18",
+        "@types/node": "^25.3.3",
+        "@vitest/coverage-istanbul": "^4.0.18",
+        "husky": "^9.1.7",
+        "knip": "^5.85.0",
+        "lint-staged": "^16.3.1",
+        "publint": "^0.3.18",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.2",
+        "tsdown": "^0.21.0-beta.2",
+        "typescript": "^5.9.3",
+        "unplugin-swc": "^1.5.9",
+        "vitest": "^4.0.18"
+    },
+    "packageManager": "yarn@4.12.0",
+    "lint-staged": {
+        "*.{ts,js,json,md}": [
+            "biome check --write --no-errors-on-unmatched"
+        ]
     }
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "tsdown",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
-    "check:types": "tsc --noEmit",
-    "check:exports": "attw --pack .",
-    "check:package": "publint",
-    "check:unused": "knip",
-    "check:all": "yarn lint && yarn check:types && yarn build && yarn test && yarn check:exports && yarn check:package && yarn check:unused",
-    "prepare": "husky"
-  },
-  "peerDependencies": {
-    "@nestjs/common": ">=10.0.0",
-    "@nestjs/core": ">=10.0.0",
-    "@restatedev/restate-sdk": ">=1.6.0",
-    "@restatedev/restate-sdk-clients": ">=1.6.0",
-    "reflect-metadata": ">=0.1.13"
-  },
-  "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.2",
-    "@biomejs/biome": "^2.4.4",
-    "@commitlint/cli": "^20.4.2",
-    "@commitlint/config-conventional": "^20.4.2",
-    "@nestjs/common": "^11.1.14",
-    "@nestjs/core": "^11.1.14",
-    "@nestjs/testing": "^11.1.14",
-    "@restatedev/restate-sdk": "^1.10.4",
-    "@restatedev/restate-sdk-clients": "^1.10.4",
-    "@types/node": "^25.3.3",
-    "@vitest/coverage-istanbul": "^4.0.18",
-    "husky": "^9.1.7",
-    "knip": "^5.85.0",
-    "lint-staged": "^16.3.1",
-    "publint": "^0.3.18",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "tsdown": "^0.21.0-beta.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
-  },
-  "packageManager": "yarn@4.12.0",
-  "lint-staged": {
-    "*.{ts,js,json,md}": ["biome check --write --no-errors-on-unmatched"]
-  }
 }
