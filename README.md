@@ -35,7 +35,7 @@ npm install nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clien
 |---|---|
 | `@nestjs/common` | `>=10.0.0` |
 | `@nestjs/core` | `>=10.0.0` |
-| `@restatedev/restate-sdk` | `>=1.6.0` |
+| `@restatedev/restate-sdk` | `>=1.8.0` |
 | `@restatedev/restate-sdk-clients` | `>=1.6.0` |
 
 ## Quick Start
