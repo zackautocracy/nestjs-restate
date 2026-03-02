@@ -302,6 +302,10 @@ describe("RestateModule", () => {
         });
 
         it("should store identityKeys in module options", async () => {
+            // Note: We only test metadata storage here, not full endpoint startup,
+            // because the SDK validates identity key format (32-byte base58) at
+            // endpoint construction time. Using a fake key with app.init() would throw.
+            // Key forwarding to the endpoint is tested in restate.endpoint.spec.ts.
             const module = await Test.createTestingModule({
                 imports: [
                     RestateModule.forRoot({

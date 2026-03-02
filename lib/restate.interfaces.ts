@@ -1,11 +1,19 @@
 import type { Http2Server } from "node:http2";
 import type {
     DefaultServiceOptions,
+    ObjectHandlerOpts,
     ObjectOptions,
     ServiceHandlerOpts,
     ServiceOptions,
+    WorkflowHandlerOpts,
     WorkflowOptions,
 } from "@restatedev/restate-sdk";
+
+/** Union of all handler option types — allows handler decorators to accept any handler-specific options. */
+export type AnyHandlerOpts =
+    | ServiceHandlerOpts<any, any>
+    | ObjectHandlerOpts<any, any>
+    | WorkflowHandlerOpts<any, any>;
 
 export interface RestateEndpointPortConfig {
     port: number;
@@ -67,7 +75,7 @@ export interface HandlerMetadata {
     type: HandlerType;
     methodName: string;
     /** Handler-level SDK options (retryPolicy, timeouts, etc.) */
-    options?: ServiceHandlerOpts<any, any>;
+    options?: AnyHandlerOpts;
 }
 
 // ── Component metadata ──

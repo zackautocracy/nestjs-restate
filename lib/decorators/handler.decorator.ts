@@ -1,11 +1,8 @@
-import type { ServiceHandlerOpts } from "@restatedev/restate-sdk";
 import { HANDLER_METADATA_KEY } from "../restate.constants";
-import type { HandlerMetadata, HandlerType } from "../restate.interfaces";
+import type { AnyHandlerOpts, HandlerMetadata, HandlerType } from "../restate.interfaces";
 
-function createHandlerDecorator(
-    type: HandlerType,
-): (options?: ServiceHandlerOpts<any, any>) => MethodDecorator {
-    return (options?: ServiceHandlerOpts<any, any>) => {
+function createHandlerDecorator(type: HandlerType): (options?: AnyHandlerOpts) => MethodDecorator {
+    return (options?: AnyHandlerOpts) => {
         return (target: object, propertyKey: string | symbol) => {
             const ctor = target.constructor;
             const existing: HandlerMetadata[] =

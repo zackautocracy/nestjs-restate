@@ -97,14 +97,18 @@ describe("RestateEndpointManager", () => {
             manager.addDefinition(svc);
 
             // SDK validates key format — invalid key should throw
-            await expect(
-                manager.start(
-                    { port: 0 },
-                    {
-                        identityKeys: ["invalid-key"],
-                    },
-                ),
-            ).rejects.toThrow();
+            try {
+                await expect(
+                    manager.start(
+                        { port: 0 },
+                        {
+                            identityKeys: ["invalid-key"],
+                        },
+                    ),
+                ).rejects.toThrow();
+            } finally {
+                await manager.stop();
+            }
         });
     });
 });
