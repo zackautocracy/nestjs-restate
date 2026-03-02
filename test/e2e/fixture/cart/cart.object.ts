@@ -1,11 +1,5 @@
 import { Handler, RestateContext, Shared, VirtualObject } from "nestjs-restate";
-
-export interface CartItem {
-    productId: string;
-    name: string;
-    price: number;
-    quantity: number;
-}
+import type { CartItem } from "../shared/interfaces";
 
 @VirtualObject("cart")
 export class CartObject {

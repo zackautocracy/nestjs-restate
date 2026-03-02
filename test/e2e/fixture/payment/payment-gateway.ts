@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
 
+/**
+ * Regular NestJS provider (not a Restate component).
+ * Demonstrates standard DI working alongside RestateContext injection.
+ */
 @Injectable()
 export class PaymentGateway {
     async processCharge(amount: number, currency: string): Promise<string> {

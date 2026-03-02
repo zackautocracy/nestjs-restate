@@ -1,19 +1,6 @@
 import { Handler, RestateContext, Service } from "nestjs-restate";
+import type { ChargeRequest, ChargeResult, RefundRequest } from "../shared/interfaces";
 import { PaymentGateway } from "./payment-gateway";
-
-export interface ChargeRequest {
-    amount: number;
-    currency: string;
-}
-
-export interface ChargeResult {
-    transactionId: string;
-    status: string;
-}
-
-export interface RefundRequest {
-    transactionId: string;
-}
 
 @Service("payment")
 export class PaymentService {

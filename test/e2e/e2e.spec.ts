@@ -5,16 +5,11 @@ import { Test } from "@nestjs/testing";
 import * as restate from "@restatedev/restate-sdk";
 import * as clients from "@restatedev/restate-sdk-clients";
 import { RestateContainer } from "@restatedev/restate-sdk-testcontainers";
-import { RestateModule } from "nestjs-restate";
 import { RestateEndpointManager } from "nestjs-restate/endpoint/restate.endpoint";
 import type { StartedTestContainer } from "testcontainers";
 import { Wait } from "testcontainers";
-import type { CartItem } from "./app/cart.object";
-import { CartObject } from "./app/cart.object";
-import { OrderWorkflow } from "./app/order.workflow";
-import type { ChargeResult } from "./app/payment.service";
-import { PaymentService } from "./app/payment.service";
-import { PaymentGateway } from "./app/payment-gateway";
+import { FixtureModule } from "./fixture/app.module";
+import type { CartItem, ChargeResult } from "./fixture/shared/interfaces";
 
 // Service definitions for the ingress client.
 // These mirror the handlers registered by the NestJS decorators.
@@ -95,16 +90,9 @@ describe("nestjs-restate E2E", () => {
     let adminUrl: string;
 
     beforeAll(async () => {
-        // 1. Boot NestJS app FIRST — starts the HTTP/2 endpoint on a random port
-        //    Ingress URL is set to a placeholder; we'll create our own client later.
+        // 1. Boot NestJS app using the fixture module (mirrors the example app structure)
         const moduleRef = await Test.createTestingModule({
-            imports: [
-                RestateModule.forRoot({
-                    ingress: "http://placeholder:8080",
-                    endpoint: { port: 0 },
-                }),
-            ],
-            providers: [PaymentGateway, PaymentService, CartObject, OrderWorkflow],
+            imports: [FixtureModule],
         }).compile();
 
         app = moduleRef.createNestApplication();

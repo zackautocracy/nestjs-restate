@@ -7,19 +7,9 @@ import {
     Shared,
     Workflow,
 } from "nestjs-restate";
-import { CartObject } from "./cart.object";
-import { PaymentService } from "./payment.service";
-
-export interface OrderRequest {
-    userId: string;
-}
-
-export interface OrderResult {
-    orderId: string;
-    transactionId: string;
-    trackingNumber: string;
-    total: number;
-}
+import { CartObject } from "../cart/cart.object";
+import { PaymentService } from "../payment/payment.service";
+import type { OrderRequest, OrderResult } from "../shared/interfaces";
 
 @Workflow("order")
 export class OrderWorkflow {
