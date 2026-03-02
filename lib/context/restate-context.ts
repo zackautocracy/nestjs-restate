@@ -1,14 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import type {
     Context,
+    ContextDate,
     DurablePromise,
     Duration,
+    InvocationId,
     ObjectContext,
     ObjectSharedContext,
     Rand,
+    Request,
     RestatePromise,
     RunAction,
     RunOptions,
+    Serde,
     WorkflowContext,
     WorkflowSharedContext,
 } from "@restatedev/restate-sdk";
@@ -91,6 +95,29 @@ export class RestateContext {
 
     get console(): Console {
         return this.ctx.console;
+    }
+
+    // ── Deterministic date ──
+
+    get date(): ContextDate {
+        return this.ctx.date;
+    }
+
+    // ── Invocation management ──
+
+    request(): Request {
+        return this.ctx.request();
+    }
+
+    cancel(invocationId: InvocationId): void {
+        this.ctx.cancel(invocationId);
+    }
+
+    attach<T>(invocationId: InvocationId, serde?: Serde<T>): RestatePromise<T> {
+        if (serde !== undefined) {
+            return this.ctx.attach(invocationId, serde);
+        }
+        return this.ctx.attach(invocationId);
     }
 
     // ── Raw SDK context (escape hatch) ──

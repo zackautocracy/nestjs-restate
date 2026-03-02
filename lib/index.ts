@@ -1,17 +1,21 @@
 // Re-export commonly used Restate SDK types for convenience
 export type {
     Context,
+    ContextDate,
     DefaultServiceOptions,
     DurablePromise,
     Duration,
     InvocationHandle,
+    InvocationId,
     ObjectContext,
     ObjectHandlerOpts,
     ObjectOptions,
     ObjectSharedContext,
+    Request,
     RetryPolicy,
     RunAction,
     RunOptions,
+    Serde,
     ServiceHandlerOpts,
     ServiceOptions,
     WorkflowContext,
@@ -22,6 +26,7 @@ export type {
 // Error classes — re-exported for convenience
 export {
     CancelledError,
+    InvocationIdParser,
     RestateError,
     RetryableError,
     rpc,

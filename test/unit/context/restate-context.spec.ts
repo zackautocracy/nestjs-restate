@@ -171,6 +171,63 @@ describe("RestateContext", () => {
         });
     });
 
+    describe("date", () => {
+        it("should delegate date to SDK context", () => {
+            const mockDate = { now: vi.fn(), toJSON: vi.fn() };
+            const mockCtx = { date: mockDate };
+
+            const result = runWithContext(mockCtx, () => ctx.date);
+
+            expect(result).toBe(mockDate);
+        });
+    });
+
+    describe("invocation management", () => {
+        it("should delegate request() to SDK context", () => {
+            const mockRequest = { id: "inv-1", headers: new Map() };
+            const mockCtx = {
+                request: vi.fn().mockReturnValue(mockRequest),
+            };
+
+            const result = runWithContext(mockCtx, () => ctx.request());
+
+            expect(result).toBe(mockRequest);
+        });
+
+        it("should delegate cancel() to SDK context", () => {
+            const mockCtx = { cancel: vi.fn() };
+
+            runWithContext(mockCtx, () => ctx.cancel("inv-123" as any));
+
+            expect(mockCtx.cancel).toHaveBeenCalledWith("inv-123");
+        });
+
+        it("should delegate attach() to SDK context", async () => {
+            const mockCtx = {
+                attach: vi.fn().mockResolvedValue("result"),
+            };
+
+            const result = await runWithContext(mockCtx, () => ctx.attach("inv-123" as any));
+
+            expect(mockCtx.attach).toHaveBeenCalledWith("inv-123");
+            expect(result).toBe("result");
+        });
+
+        it("should delegate attach() with serde to SDK context", async () => {
+            const mockSerde = {} as any;
+            const mockCtx = {
+                attach: vi.fn().mockResolvedValue("result"),
+            };
+
+            const result = await runWithContext(mockCtx, () =>
+                ctx.attach("inv-123" as any, mockSerde),
+            );
+
+            expect(mockCtx.attach).toHaveBeenCalledWith("inv-123", mockSerde);
+            expect(result).toBe("result");
+        });
+    });
+
     describe("singleton safety", () => {
         it("should use different contexts for concurrent invocations", async () => {
             const ctx1 = { key: "user-1" };
