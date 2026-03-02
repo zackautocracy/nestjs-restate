@@ -254,6 +254,12 @@ describe("RestateExplorer", () => {
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("configured-service");
+            expect(definitions[0].description).toBe("A configured service");
+            expect(definitions[0].metadata).toEqual({ version: "2" });
+            expect(definitions[0].options).toEqual({
+                retryPolicy: { maxAttempts: 5 },
+                inactivityTimeout: 30_000,
+            });
         });
 
         it("should forward workflow options to SDK definition", () => {
@@ -285,6 +291,12 @@ describe("RestateExplorer", () => {
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("configured-workflow");
+            expect(definitions[0].description).toBe("A configured workflow");
+            expect(definitions[0].metadata).toEqual({ team: "backend" });
+            expect(definitions[0].options).toEqual({
+                workflowRetention: 604800000,
+                retryPolicy: { maxAttempts: 3 },
+            });
         });
 
         it("should forward virtual object options to SDK definition", () => {
@@ -315,6 +327,11 @@ describe("RestateExplorer", () => {
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("configured-object");
+            expect(definitions[0].metadata).toEqual({ team: "commerce" });
+            expect(definitions[0].options).toEqual({
+                enableLazyState: true,
+                retryPolicy: { maxAttempts: 10 },
+            });
         });
 
         it("should forward handler-level options for service handlers", () => {

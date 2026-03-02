@@ -115,7 +115,7 @@ All class decorators implicitly apply `@Injectable()`.
 | `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
 | `@InjectClient()` | Injects the Restate `Ingress` client |
 
-All decorators also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
+Component and handler decorators (`@Service`, `@VirtualObject`, `@Workflow`, `@Handler`, `@Run`, `@Shared`) also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
 
 ## Services
 
