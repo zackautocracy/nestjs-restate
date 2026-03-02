@@ -1,11 +1,19 @@
-# nestjs-restate
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-[![npm version](https://img.shields.io/npm/v/nestjs-restate.svg)](https://www.npmjs.com/package/nestjs-restate)
-[![CI](https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ZackAutocracy/nestjs-restate/branch/main/graph/badge.svg)](https://codecov.io/gh/ZackAutocracy/nestjs-restate)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">A first-class <a href="https://nestjs.com/">NestJS</a> integration for <a href="https://restate.dev/">Restate</a> — the durable execution engine.</p>
 
-A first-class [NestJS](https://nestjs.com/) integration for [Restate](https://restate.dev/) — the durable execution engine. Define workflows, services, and virtual objects as regular NestJS injectable classes with decorators, getting full dependency injection, auto-discovery, and lifecycle management out of the box.
+<p align="center">
+  <a href="https://www.npmjs.com/package/nestjs-restate"><img src="https://img.shields.io/npm/v/nestjs-restate.svg" alt="NPM Version" /></a>
+  <a href="https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml"><img src="https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://codecov.io/gh/ZackAutocracy/nestjs-restate"><img src="https://codecov.io/gh/ZackAutocracy/nestjs-restate/branch/main/graph/badge.svg" alt="Coverage" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
+
+## Description
+
+Define workflows, services, and virtual objects as regular NestJS injectable classes with decorators, getting full dependency injection, auto-discovery, and lifecycle management out of the box.
 
 ## Features
 
@@ -271,6 +279,75 @@ export class CounterObject {
     @Shared()
     async getCount(ctx: ObjectSharedContext) {
         return (await ctx.get<number>('count')) ?? 0;
+    }
+}
+```
+
+## Workflows
+
+Workflows are durable, long-running processes with a single `@Run()` entry point. They support durable promises and shared handlers for external signals.
+
+```typescript
+@Workflow('payment')
+export class PaymentWorkflow {
+    constructor(private readonly payments: PaymentService) {}
+
+    @Run()
+    async run(ctx: WorkflowContext, input: { orderId: string; amount: number }) {
+        const intentId = await ctx.run('create-intent', () =>
+            this.payments.createIntent(input.orderId, input.amount),
+        );
+
+        // Suspend until an external signal resolves this promise
+        const confirmation = await ctx.promise<string>('payment-confirmed');
+
+        await ctx.run('finalize', () =>
+            this.payments.finalize(intentId, confirmation),
+        );
+
+        return { success: true, intentId };
+    }
+
+    @Shared()
+    async confirmPayment(ctx: WorkflowSharedContext, input: { confirmationId: string }) {
+        ctx.promise<string>('payment-confirmed').resolve(input.confirmationId);
+    }
+}
+```
+
+**Key rules:**
+- Exactly **one** `@Run()` method per workflow (the main entry point)
+- `@Shared()` methods can be called concurrently while the workflow is running
+- Use `ctx.promise()` for durable signals between the run and shared handlers
+
+### Calling a Workflow
+
+```typescript
+@Injectable()
+export class OrderService {
+    constructor(@InjectClient() private readonly restate: Ingress) {}
+
+    async placeOrder(orderId: string, amount: number) {
+        const client = this.restate.workflowClient<PaymentWorkflow>(
+            { name: 'payment' },
+            orderId,
+        );
+
+        // Start the workflow (non-blocking)
+        await client.workflowSubmit({ orderId, amount });
+
+        // Or start and wait for the result
+        const result = await client.workflowSubmit({ orderId, amount });
+    }
+
+    async confirmPayment(orderId: string, confirmationId: string) {
+        const client = this.restate.workflowClient<PaymentWorkflow>(
+            { name: 'payment' },
+            orderId,
+        );
+
+        // Signal the running workflow via a shared handler
+        await client.confirmPayment({ confirmationId });
     }
 }
 ```
