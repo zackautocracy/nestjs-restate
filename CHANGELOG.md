@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v1.0.0...nestjs-restate-v1.1.0) (2026-03-02)
+
+
+### Features
+
+* add SDK configuration passthrough for retry policies, timeouts, and handler options ([abc5ca0](https://github.com/zackautocracy/nestjs-restate/commit/abc5ca0f13ae2d2249802c95aed3dc3fa6be9f8e))
+
+
+### Bug Fixes
+
+* address review feedback from Copilot and CodeRabbit ([5151851](https://github.com/zackautocracy/nestjs-restate/commit/51518519a55120660ecbeff7b89de4f50438f6a6))
+* normalize repository URL casing for npm provenance ([9834345](https://github.com/zackautocracy/nestjs-restate/commit/9834345270ad223aa233bac444f8e787612312cd))
+
 ## 1.0.0 (2026-03-02)
 
 
