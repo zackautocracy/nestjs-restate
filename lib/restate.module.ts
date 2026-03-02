@@ -96,7 +96,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         const listeningPort = this.endpointManager.getListeningPort();
 
         if (autoRegister.deploymentUrl.includes("{{port}}") && listeningPort === null) {
-            this.logger.warn(
+            RestateModule.logger.warn(
                 "autoRegister.deploymentUrl contains {{port}} placeholder but no port is available (lambda mode or no services). Skipping registration.",
             );
             return;
