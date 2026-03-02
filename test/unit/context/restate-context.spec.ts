@@ -85,6 +85,14 @@ describe("RestateContext", () => {
             expect(mockCtx.resolveAwakeable).toHaveBeenCalledWith("awk-1", "value");
         });
 
+        it("should delegate resolveAwakeable() without payload", () => {
+            const mockCtx = { resolveAwakeable: vi.fn() };
+
+            runWithContext(mockCtx, () => ctx.resolveAwakeable("awk-1"));
+
+            expect(mockCtx.resolveAwakeable).toHaveBeenCalledWith("awk-1");
+        });
+
         it("should delegate rejectAwakeable() to SDK context", () => {
             const mockCtx = { rejectAwakeable: vi.fn() };
 
