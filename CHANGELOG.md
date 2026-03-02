@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v1.0.0...nestjs-restate-v1.0.1) (2026-03-02)
+
+
+### Bug Fixes
+
+* normalize repository URL casing for npm provenance ([9834345](https://github.com/zackautocracy/nestjs-restate/commit/9834345270ad223aa233bac444f8e787612312cd))
+
 ## 1.0.0 (2026-03-02)
 
 
