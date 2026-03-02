@@ -21,6 +21,11 @@ export class RestateExplorer {
 
     constructor(private readonly discoveryService: DiscoveryService) {}
 
+    /** Wrap a bound handler method so its Restate SDK context is stored in AsyncLocalStorage. */
+    private wrapHandler(rawFn: (input: any) => any) {
+        return (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
+    }
+
     discover(): any[] {
         const definitions: any[] = [];
         const providers = this.discoveryService.getProviders();
@@ -70,7 +75,7 @@ export class RestateExplorer {
             );
         }
         const rawRunFn = instance[runHandler.methodName].bind(instance);
-        const runFn = (ctx: any, input: any) => runWithContext(ctx, () => rawRunFn(input));
+        const runFn = this.wrapHandler(rawRunFn);
 
         const handlerMap: Record<string, any> = {
             run: runHandler.options
@@ -80,7 +85,7 @@ export class RestateExplorer {
 
         for (const h of sharedHandlers) {
             const rawFn = instance[h.methodName].bind(instance);
-            const fn = (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
+            const fn = this.wrapHandler(rawFn);
             handlerMap[h.methodName] = h.options
                 ? restate.handlers.workflow.shared(h.options, fn)
                 : restate.createWorkflowSharedHandler(fn);
@@ -112,7 +117,7 @@ export class RestateExplorer {
         const handlerMap: Record<string, any> = {};
         for (const h of handlerMethods) {
             const rawFn = instance[h.methodName].bind(instance);
-            const fn = (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
+            const fn = this.wrapHandler(rawFn);
             handlerMap[h.methodName] = h.options ? restate.handlers.handler(h.options, fn) : fn;
         }
 
@@ -144,7 +149,7 @@ export class RestateExplorer {
 
         for (const h of exclusiveHandlers) {
             const rawFn = instance[h.methodName].bind(instance);
-            const fn = (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
+            const fn = this.wrapHandler(rawFn);
             handlerMap[h.methodName] = h.options
                 ? restate.handlers.object.exclusive(h.options, fn)
                 : fn;
@@ -152,7 +157,7 @@ export class RestateExplorer {
 
         for (const h of sharedHandlers) {
             const rawFn = instance[h.methodName].bind(instance);
-            const fn = (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
+            const fn = this.wrapHandler(rawFn);
             handlerMap[h.methodName] = h.options
                 ? restate.handlers.object.shared(h.options, fn)
                 : restate.createObjectSharedHandler(fn);

@@ -17,7 +17,7 @@ import type { OrderRequest, OrderResult } from "../shared/interfaces";
  *   - @InjectClient(T) typed proxies for cross-service calls
  *   - ctx.run() for durable side effects
  *   - ctx.promise() for external signals (shipment confirmation)
- *   - ctx.key() for workflow identity
+ *   - ctx.key for workflow identity
  */
 @Workflow("order")
 export class OrderWorkflow {
@@ -29,7 +29,7 @@ export class OrderWorkflow {
 
     @Run()
     async run(input: OrderRequest): Promise<OrderResult> {
-        const orderId = this.ctx.key();
+        const orderId = this.ctx.key;
 
         // 1. Read the user's cart
         const items = await this.cart.key(input.userId).getItems();
@@ -40,9 +40,7 @@ export class OrderWorkflow {
 
         const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-        (this.ctx.raw as any).console.log(
-            `Order ${orderId}: ${items.length} items, total $${total.toFixed(2)}`,
-        );
+        this.ctx.console.log(`Order ${orderId}: ${items.length} items, total $${total.toFixed(2)}`);
 
         // 2. Charge payment (durable RPC to PaymentService)
         const charge = await this.payment.charge({ amount: total, currency: "USD" });
@@ -53,9 +51,7 @@ export class OrderWorkflow {
         // 4. Clear the user's cart
         await this.cart.key(input.userId).clear();
 
-        (this.ctx.raw as any).console.log(
-            `Order ${orderId} fulfilled — tracking: ${trackingNumber}`,
-        );
+        this.ctx.console.log(`Order ${orderId} fulfilled — tracking: ${trackingNumber}`);
 
         return {
             orderId,

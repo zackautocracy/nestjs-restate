@@ -81,6 +81,12 @@ export class RestateContext {
         return this.ctx.key;
     }
 
+    // ── Logging (context-aware, automatically muted during replay) ──
+
+    get console(): Console {
+        return this.ctx.console;
+    }
+
     // ── Raw SDK context (escape hatch) ──
 
     get raw():

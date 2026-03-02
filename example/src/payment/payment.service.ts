@@ -19,9 +19,7 @@ export class PaymentService {
             this.gateway.processCharge(input.amount, input.currency),
         );
 
-        (this.ctx.raw as any).console.log(
-            `Charged ${input.amount} ${input.currency} → ${transactionId}`,
-        );
+        this.ctx.console.log(`Charged ${input.amount} ${input.currency} → ${transactionId}`);
 
         return { transactionId, status: "charged" };
     }
@@ -30,6 +28,6 @@ export class PaymentService {
     async refund(input: RefundRequest): Promise<void> {
         await this.ctx.run("process-refund", () => this.gateway.processRefund(input.transactionId));
 
-        (this.ctx.raw as any).console.log(`Refunded ${input.transactionId}`);
+        this.ctx.console.log(`Refunded ${input.transactionId}`);
     }
 }

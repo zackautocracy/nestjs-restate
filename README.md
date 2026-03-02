@@ -95,18 +95,18 @@ Auto-discovery handles the rest — no manual registration with the Restate endp
 **Typed proxy** (recommended for inter-service calls) — any `@Service`, `@VirtualObject`, or `@Workflow` class is auto-discovered and available for injection. Typed proxies use `AsyncLocalStorage` and **only work inside Restate handler methods** (i.e., methods decorated with `@Handler()`, `@Run()`, or `@Shared()`):
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectClient, type ServiceClient } from 'nestjs-restate';
-import type { GreeterService } from './greeter.service';
+import { Service, Handler, InjectClient, type ServiceClient } from 'nestjs-restate';
+import { GreeterService } from './greeter.service';
 
-@Injectable()
-export class AppService {
+@Service('orchestrator')
+export class OrchestratorService {
     constructor(
         @InjectClient(GreeterService) private readonly greeter: ServiceClient<GreeterService>,
     ) {}
 
-    async greet(name: string) {
-        return this.greeter.greet(name);
+    @Handler()
+    async orchestrate(input: { name: string }) {
+        return this.greeter.greet(input.name);
     }
 }
 ```
@@ -249,20 +249,20 @@ import { Workflow, Run, Shared, RestateContext } from 'nestjs-restate';
 export class PaymentWorkflow {
     constructor(
         private readonly ctx: RestateContext,
-        private readonly payments: PaymentService,
+        private readonly gateway: PaymentGateway, // regular NestJS provider (not a Restate service)
     ) {}
 
     @Run()
     async run(input: { orderId: string; amount: number }) {
         const intentId = await this.ctx.run('create-intent', () =>
-            this.payments.createIntent(input.orderId, input.amount),
+            this.gateway.createIntent(input.orderId, input.amount),
         );
 
         // Suspend until an external signal resolves this promise
         const confirmation = await this.ctx.promise<string>('payment-confirmed');
 
         await this.ctx.run('finalize', () =>
-            this.payments.finalize(intentId, confirmation),
+            this.gateway.finalize(intentId, confirmation),
         );
 
         return { success: true, intentId };
@@ -280,24 +280,25 @@ export class PaymentWorkflow {
 - `@Shared()` methods can be called concurrently while the workflow is running
 - Use `this.ctx.promise()` for durable signals between run and shared handlers
 
-Call a workflow using a typed proxy:
+Call a workflow from another Restate handler using a typed proxy:
 
 ```typescript
-@Injectable()
+import { Service, Handler, InjectClient, type WorkflowClient } from 'nestjs-restate';
+import { PaymentWorkflow } from './payment.workflow';
+
+@Service('checkout')
 export class CheckoutService {
     constructor(
         @InjectClient(PaymentWorkflow) private readonly payment: WorkflowClient<PaymentWorkflow>,
     ) {}
 
-    async startPayment(orderId: string, amount: number) {
+    @Handler()
+    async startPayment(input: { orderId: string; amount: number }) {
         // Start (non-blocking — fire-and-forget via .send)
-        this.payment.key(orderId).send.run({ orderId, amount });
-
-        // Or start and await the result (blocking)
-        const result = await this.payment.key(orderId).run({ orderId, amount });
+        this.payment.key(input.orderId).send.run({ orderId: input.orderId, amount: input.amount });
 
         // Signal the running workflow
-        await this.payment.key(orderId).confirmPayment({ confirmationId: 'conf-123' });
+        await this.payment.key(input.orderId).confirmPayment({ confirmationId: 'conf-123' });
     }
 }
 ```

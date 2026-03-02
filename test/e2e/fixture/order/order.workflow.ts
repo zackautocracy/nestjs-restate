@@ -21,7 +21,7 @@ export class OrderWorkflow {
 
     @Run()
     async run(input: OrderRequest): Promise<OrderResult> {
-        const orderId = this.ctx.key();
+        const orderId = this.ctx.key;
 
         // 1. Read the user's cart
         const items = await this.cart.key(input.userId).getItems();
