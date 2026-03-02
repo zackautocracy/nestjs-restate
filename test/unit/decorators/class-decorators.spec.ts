@@ -1,10 +1,10 @@
 import "reflect-metadata";
-import { Service, VirtualObject, Workflow } from "../../src/decorators/index";
+import { Service, VirtualObject, Workflow } from "nestjs-restate";
 import {
     SERVICE_METADATA_KEY,
     VIRTUAL_OBJECT_METADATA_KEY,
     WORKFLOW_METADATA_KEY,
-} from "../../src/restate.constants";
+} from "nestjs-restate/restate.constants";
 
 describe("Class Decorators", () => {
     describe("@Workflow", () => {

@@ -18,9 +18,13 @@
         "emitDecoratorMetadata": true,
         "skipLibCheck": true,
         "outDir": "./dist",
-        "rootDir": "./src",
-        "types": ["node"]
+        "rootDir": "./lib",
+        "types": ["node"],
+        "paths": {
+            "nestjs-restate": ["./lib/index.ts"],
+            "nestjs-restate/*": ["./lib/*"]
+        }
     },
-    "include": ["src/**/*.ts"],
+    "include": ["lib/**/*.ts"],
     "exclude": ["node_modules", "dist", "test"]
 }

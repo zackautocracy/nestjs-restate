@@ -1,5 +1,5 @@
 import * as restate from "@restatedev/restate-sdk";
-import { RestateEndpointManager } from "../../src/endpoint/restate.endpoint";
+import { RestateEndpointManager } from "nestjs-restate/endpoint/restate.endpoint";
 
 describe("RestateEndpointManager", () => {
     let manager: RestateEndpointManager;

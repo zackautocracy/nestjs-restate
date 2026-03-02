@@ -5,11 +5,8 @@ import { Handler, Service } from "nestjs-restate";
 export class CounterService {
     @Handler()
     async add(ctx: restate.Context, request: { a: number; b: number }): Promise<number> {
-        return request.a + request.b;
-    }
-
-    @Handler()
-    async echo(ctx: restate.Context, message: string): Promise<string> {
-        return `echo: ${message}`;
+        const sum = request.a + request.b;
+        ctx.console.log(`Adding ${request.a} + ${request.b} = ${sum}`);
+        return sum;
     }
 }

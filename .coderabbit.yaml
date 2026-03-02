@@ -1,0 +1,11 @@
+language: en-US
+reviews:
+  auto_review:
+    enabled: true
+    base_branches:
+      - main
+  review_status: true
+  path_instructions: []
+  path_filters: []
+chat:
+  auto_reply: true

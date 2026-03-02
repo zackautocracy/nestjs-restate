@@ -1,7 +1,7 @@
 import "reflect-metadata";
-import { Handler, Run, Shared } from "../../src/decorators/index";
-import { HANDLER_METADATA_KEY } from "../../src/restate.constants";
-import type { HandlerMetadata } from "../../src/restate.interfaces";
+import { Handler, Run, Shared } from "nestjs-restate";
+import { HANDLER_METADATA_KEY } from "nestjs-restate/restate.constants";
+import type { HandlerMetadata } from "nestjs-restate/restate.interfaces";
 
 describe("Method Decorators", () => {
     describe("@Run", () => {

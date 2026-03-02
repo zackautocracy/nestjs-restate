@@ -1,2 +1,12 @@
+min_version = "2025.1.0"
+
+[settings]
+experimental = true
+lockfile = true
+yes = true
+
 [tools]
-node = "22"
+node = { version = "22", postinstall = "corepack enable" }
+
+[env]
+_.path = ["{{config_root}}/node_modules/.bin"]

@@ -1,11 +1,11 @@
 import "reflect-metadata";
-import { InjectClient } from "../../src/decorators/index";
+import { InjectClient } from "nestjs-restate";
 
 describe("@InjectClient", () => {
     it("should create a parameter decorator without throwing", () => {
         expect(() => {
             class TestService {
-                constructor(@InjectClient() private readonly client: any) {
+                constructor(@InjectClient() readonly client: any) {
                     // noop — just verifying the decorator applies
                     void client;
                 }
@@ -16,7 +16,7 @@ describe("@InjectClient", () => {
 
     it("should set injection metadata on the constructor parameter", () => {
         class TestService {
-            constructor(@InjectClient() private readonly client: any) {
+            constructor(@InjectClient() readonly client: any) {
                 void client;
             }
         }

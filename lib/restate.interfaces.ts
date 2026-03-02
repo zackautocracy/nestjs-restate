@@ -1,11 +1,11 @@
-import type * as http2 from "node:http2";
+import type { Http2Server } from "node:http2";
 
 export interface RestateEndpointPortConfig {
     port: number;
 }
 
 export interface RestateEndpointServerConfig {
-    server: http2.Http2Server;
+    server: Http2Server;
 }
 
 export interface RestateEndpointLambdaConfig {
@@ -17,6 +17,14 @@ export type EndpointConfig =
     | RestateEndpointServerConfig
     | RestateEndpointLambdaConfig;
 
+export interface AutoRegisterOptions {
+    /** Full URL where Restate server can reach this service endpoint.
+     *  Supports `{{port}}` placeholder for random port scenarios (port: 0). */
+    deploymentUrl: string;
+    /** Force-overwrite existing deployments (default: true) */
+    force?: boolean;
+}
+
 export interface RestateModuleOptions {
     /** Restate server ingress URL (e.g., http://restate:8080) */
     ingress: string;
@@ -24,8 +32,8 @@ export interface RestateModuleOptions {
     admin?: string;
     /** HTTP/2 endpoint configuration */
     endpoint: EndpointConfig;
-    /** Auto-register deployment with Restate server on startup (default: false) */
-    autoRegister?: boolean;
+    /** Auto-register deployment with Restate server on startup */
+    autoRegister?: AutoRegisterOptions;
 }
 
 export interface RestateModuleAsyncOptions {

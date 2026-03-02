@@ -87,20 +87,28 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
     }
 
     private async registerDeployment(): Promise<void> {
-        const endpointPort = "port" in this.options.endpoint ? this.options.endpoint.port : null;
+        const { autoRegister, admin } = this.options;
 
-        if (!endpointPort || !this.options.admin) {
+        if (!autoRegister || !admin) {
+            return;
+        }
+
+        const listeningPort = this.endpointManager.getListeningPort();
+
+        if (autoRegister.deploymentUrl.includes("{{port}}") && listeningPort === null) {
             RestateModule.logger.warn(
-                "Auto-registration requires a port-based endpoint and admin URL",
+                "autoRegister.deploymentUrl contains {{port}} placeholder but no port is available (lambda mode or no services). Skipping registration.",
             );
             return;
         }
 
+        const deploymentUrl = autoRegister.deploymentUrl.replace("{{port}}", String(listeningPort));
+
         try {
-            const url = `${this.options.admin}/deployments`;
+            const url = `${admin}/deployments`;
             const body = JSON.stringify({
-                uri: `http://host.docker.internal:${endpointPort}`,
-                force: true,
+                uri: deploymentUrl,
+                force: autoRegister.force ?? true,
             });
 
             const response = await fetch(url, {
@@ -111,7 +119,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
             if (response.ok) {
                 RestateModule.logger.log(
-                    `Deployment auto-registered with Restate server at ${this.options.admin}`,
+                    `Deployment auto-registered at ${admin} with URI ${deploymentUrl}`,
                 );
             } else {
                 const text = await response.text();

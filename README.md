@@ -1,11 +1,21 @@
-# nestjs-restate
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-[![npm version](https://img.shields.io/npm/v/nestjs-restate.svg)](https://www.npmjs.com/package/nestjs-restate)
-[![CI](https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ZackAutocracy/nestjs-restate/branch/main/graph/badge.svg)](https://codecov.io/gh/ZackAutocracy/nestjs-restate)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<h1 align="center">nestjs-restate</h1>
 
-A first-class [NestJS](https://nestjs.com/) integration for [Restate](https://restate.dev/) — the durable execution engine. Define workflows, services, and virtual objects as regular NestJS injectable classes with decorators, getting full dependency injection, auto-discovery, and lifecycle management out of the box.
+<p align="center">A first-class <a href="https://nestjs.com/">NestJS</a> integration for <a href="https://restate.dev/">Restate</a> — the durable execution engine.</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/nestjs-restate"><img src="https://img.shields.io/npm/v/nestjs-restate.svg" alt="NPM Version" /></a>
+  <a href="https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml"><img src="https://github.com/ZackAutocracy/nestjs-restate/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://codecov.io/gh/ZackAutocracy/nestjs-restate"><img src="https://codecov.io/gh/ZackAutocracy/nestjs-restate/branch/main/graph/badge.svg" alt="Coverage" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
+
+## Description
+
+Define workflows, services, and virtual objects as regular NestJS injectable classes with decorators, getting full dependency injection, auto-discovery, and lifecycle management out of the box.
 
 ## Features
 
@@ -142,7 +152,9 @@ RestateModule.forRoot({
     ingress: 'http://restate:8080',      // Required: Restate server ingress URL
     endpoint: { port: 9080 },            // Required: HTTP/2 endpoint configuration
     admin: 'http://restate:9070',         // Optional: Restate admin URL
-    autoRegister: true,                   // Optional: Auto-register on startup (default: false)
+    autoRegister: {                       // Optional: Auto-register on startup
+        deploymentUrl: 'http://host.docker.internal:9080',
+    },
 })
 ```
 
@@ -159,7 +171,9 @@ RestateModule.forRootAsync({
         endpoint: {
             port: parseInt(config.getOrThrow('RESTATE_ENDPOINT_PORT'), 10),
         },
-        autoRegister: config.get('NODE_ENV') === 'development',
+        autoRegister: config.get('NODE_ENV') === 'development'
+            ? { deploymentUrl: `http://host.docker.internal:${config.getOrThrow('RESTATE_ENDPOINT_PORT')}` }
+            : undefined,
     }),
 })
 ```
@@ -177,7 +191,34 @@ endpoint: { server: myHttp2Server }
 endpoint: { type: 'lambda' }
 ```
 
-> **Why a separate HTTP/2 server?** Restate communicates over HTTP/2 bidirectional streaming. Express/Fastify (used by NestJS) only support HTTP/1.1. The library runs a dedicated HTTP/2 server alongside your NestJS application.
+> **Why a separate HTTP/2 server?** Restate uses its own binary protocol over HTTP/2 bidirectional streaming. The Restate SDK provides a dedicated request handler that cannot be mounted as middleware in Express or Fastify. This library runs a dedicated HTTP/2 server alongside your NestJS application to serve the Restate protocol.
+
+### Auto-Registration
+
+When `autoRegister` is set, the module registers the deployment with the Restate admin API on startup. This is useful during development so you don't need to manually `curl` the admin endpoint.
+
+```typescript
+autoRegister: {
+    deploymentUrl: 'http://host.docker.internal:9080',  // Where Restate can reach your service
+    force: true,                                         // Overwrite existing deployments (default)
+}
+```
+
+The `deploymentUrl` depends on your environment:
+
+| Environment | `deploymentUrl` |
+|---|---|
+| Docker Desktop | `http://host.docker.internal:9080` |
+| Local (no Docker) | `http://localhost:9080` |
+| Kubernetes | `http://my-service.default:9080` |
+| Docker-in-Docker / CI | `http://<container-ip>:9080` |
+
+When using random ports (`port: 0`), use the `{{port}}` placeholder:
+
+```typescript
+endpoint: { port: 0 },
+autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
+```
 
 ## Decorators
 
@@ -240,6 +281,75 @@ export class CounterObject {
     @Shared()
     async getCount(ctx: ObjectSharedContext) {
         return (await ctx.get<number>('count')) ?? 0;
+    }
+}
+```
+
+## Workflows
+
+Workflows are durable, long-running processes with a single `@Run()` entry point. They support durable promises and shared handlers for external signals.
+
+```typescript
+@Workflow('payment')
+export class PaymentWorkflow {
+    constructor(private readonly payments: PaymentService) {}
+
+    @Run()
+    async run(ctx: WorkflowContext, input: { orderId: string; amount: number }) {
+        const intentId = await ctx.run('create-intent', () =>
+            this.payments.createIntent(input.orderId, input.amount),
+        );
+
+        // Suspend until an external signal resolves this promise
+        const confirmation = await ctx.promise<string>('payment-confirmed');
+
+        await ctx.run('finalize', () =>
+            this.payments.finalize(intentId, confirmation),
+        );
+
+        return { success: true, intentId };
+    }
+
+    @Shared()
+    async confirmPayment(ctx: WorkflowSharedContext, input: { confirmationId: string }) {
+        ctx.promise<string>('payment-confirmed').resolve(input.confirmationId);
+    }
+}
+```
+
+**Key rules:**
+- Exactly **one** `@Run()` method per workflow (the main entry point)
+- `@Shared()` methods can be called concurrently while the workflow is running
+- Use `ctx.promise()` for durable signals between the run and shared handlers
+
+### Calling a Workflow
+
+```typescript
+@Injectable()
+export class OrderService {
+    constructor(@InjectClient() private readonly restate: Ingress) {}
+
+    async placeOrder(orderId: string, amount: number) {
+        const client = this.restate.workflowClient<PaymentWorkflow>(
+            { name: 'payment' },
+            orderId,
+        );
+
+        // Start the workflow (non-blocking)
+        await client.workflowSubmit({ orderId, amount });
+
+        // Or attach to the running workflow and wait for the result
+        const result = await client.workflowAttach();
+    }
+
+    async confirmPayment(orderId: string, confirmationId: string) {
+        const client = this.restate.workflowClient<PaymentWorkflow>(
+            { name: 'payment' },
+            orderId,
+        );
+
+        // Signal the running workflow via a shared handler
+        await client.confirmPayment({ confirmationId });
     }
 }
 ```
