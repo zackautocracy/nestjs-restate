@@ -42,7 +42,7 @@ export {
 } from "@restatedev/restate-sdk";
 // Context
 export { RestateContext } from "./context/restate-context";
-export { getCurrentContext } from "./context/restate-context.store";
+export { getContextIfAvailable, getCurrentContext } from "./context/restate-context.store";
 export {
     Handler,
     InjectClient,

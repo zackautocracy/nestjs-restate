@@ -1,4 +1,8 @@
-import { getCurrentContext, runWithContext } from "nestjs-restate/context/restate-context.store";
+import {
+    getContextIfAvailable,
+    getCurrentContext,
+    runWithContext,
+} from "nestjs-restate/context/restate-context.store";
 import { describe, expect, it } from "vitest";
 
 describe("restate-context.store", () => {
@@ -66,6 +70,20 @@ describe("restate-context.store", () => {
                 const ctx = getCurrentContext<{ key: string; run: () => void }>();
                 expect(ctx.key).toBe("typed");
                 expect(typeof ctx.run).toBe("function");
+            });
+        });
+    });
+
+    describe("getContextIfAvailable", () => {
+        it("should return undefined when called outside runWithContext", () => {
+            expect(getContextIfAvailable()).toBeUndefined();
+        });
+
+        it("should return context when called inside runWithContext", () => {
+            const mockCtx = { key: "available" };
+
+            runWithContext(mockCtx, () => {
+                expect(getContextIfAvailable()).toBe(mockCtx);
             });
         });
     });

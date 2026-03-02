@@ -18,3 +18,7 @@ export function getCurrentContext<T = any>(): T {
     }
     return ctx;
 }
+
+export function getContextIfAvailable<T = any>(): T | undefined {
+    return contextStore.getStore();
+}
