@@ -49,7 +49,18 @@ export type WorkflowClient<T> = {
 
 // ── Proxy Factory ──
 
-const PASSTHROUGH_PROPS = new Set(["then", "catch", "finally", "toJSON", "valueOf"]);
+const PASSTHROUGH_PROPS = new Set([
+    "then",
+    "catch",
+    "finally",
+    "toJSON",
+    "valueOf",
+    "onModuleInit",
+    "onModuleDestroy",
+    "onApplicationBootstrap",
+    "onApplicationShutdown",
+    "beforeApplicationShutdown",
+]);
 
 function createMethodProxy(getClient: (ctx: any) => any, getSendClient: (ctx: any) => any): any {
     const sendProxy = new Proxy({} as any, {

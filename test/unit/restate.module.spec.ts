@@ -1,8 +1,18 @@
 import "reflect-metadata";
 import { Global, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { Handler, RESTATE_CLIENT, RestateModule, Service } from "nestjs-restate";
+import {
+    Handler,
+    RESTATE_CLIENT,
+    RestateModule,
+    Run,
+    Service,
+    VirtualObject,
+    Workflow,
+} from "nestjs-restate";
+import { RestateContext } from "nestjs-restate/context/restate-context";
 import { RestateEndpointManager } from "nestjs-restate/endpoint/restate.endpoint";
+import { getClientToken } from "nestjs-restate/proxy/client-token";
 import { RESTATE_OPTIONS } from "nestjs-restate/restate.constants";
 
 describe("RestateModule", () => {
@@ -318,6 +328,139 @@ describe("RestateModule", () => {
 
             const options = module.get(RESTATE_OPTIONS);
             expect(options.identityKeys).toEqual(["publickeyv1_somekey"]);
+
+            await module.close();
+        });
+    });
+
+    describe("RestateContext provider", () => {
+        it("should auto-register RestateContext in forRoot", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 9080 },
+                    }),
+                ],
+            }).compile();
+
+            const ctx = module.get(RestateContext);
+            expect(ctx).toBeInstanceOf(RestateContext);
+
+            await module.close();
+        });
+
+        it("should auto-register RestateContext in forRootAsync", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRootAsync({
+                        useFactory: () => ({
+                            ingress: "http://localhost:8080",
+                            endpoint: { port: 9080 },
+                        }),
+                    }),
+                ],
+            }).compile();
+
+            const ctx = module.get(RestateContext);
+            expect(ctx).toBeInstanceOf(RestateContext);
+
+            await module.close();
+        });
+    });
+
+    describe("clients array", () => {
+        @Service("payment")
+        class PaymentService {
+            @Handler()
+            async charge() {
+                return "ok";
+            }
+        }
+
+        @VirtualObject("cart")
+        class CartObject {
+            @Handler()
+            async addItem() {}
+        }
+
+        @Workflow("signup")
+        class SignupWorkflow {
+            @Run()
+            async run() {
+                return "done";
+            }
+        }
+
+        it("should register client proxy providers from forRoot clients array", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 9080 },
+                        clients: [PaymentService, CartObject, SignupWorkflow],
+                    }),
+                ],
+            }).compile();
+
+            const paymentProxy = module.get(getClientToken(PaymentService));
+            expect(paymentProxy).toBeDefined();
+
+            const cartProxy = module.get(getClientToken(CartObject));
+            expect(cartProxy).toBeDefined();
+
+            const signupProxy = module.get(getClientToken(SignupWorkflow));
+            expect(signupProxy).toBeDefined();
+
+            await module.close();
+        });
+
+        it("should register client proxy providers from forRootAsync clients array", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRootAsync({
+                        useFactory: () => ({
+                            ingress: "http://localhost:8080",
+                            endpoint: { port: 9080 },
+                        }),
+                        clients: [PaymentService],
+                    }),
+                ],
+            }).compile();
+
+            const paymentProxy = module.get(getClientToken(PaymentService));
+            expect(paymentProxy).toBeDefined();
+
+            await module.close();
+        });
+
+        it("should work with empty clients array", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 9080 },
+                        clients: [],
+                    }),
+                ],
+            }).compile();
+
+            expect(module).toBeDefined();
+
+            await module.close();
+        });
+
+        it("should work without clients array (backward compat)", async () => {
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 9080 },
+                    }),
+                ],
+            }).compile();
+
+            expect(module).toBeDefined();
 
             await module.close();
         });
