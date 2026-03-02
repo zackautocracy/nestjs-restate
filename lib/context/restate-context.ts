@@ -75,12 +75,19 @@ export class RestateContext {
 
     // ── State (ObjectContext/WorkflowContext only — throws otherwise) ──
 
-    get<T>(key: string): Promise<T | null> {
+    get<T>(key: string, serde?: Serde<T>): Promise<T | null> {
+        if (serde !== undefined) {
+            return this.ctx.get(key, serde);
+        }
         return this.ctx.get(key);
     }
 
-    set<T>(key: string, value: T): void {
-        this.ctx.set(key, value);
+    set<T>(key: string, value: T, serde?: Serde<T>): void {
+        if (serde !== undefined) {
+            this.ctx.set(key, value, serde);
+        } else {
+            this.ctx.set(key, value);
+        }
     }
 
     clear(key: string): void {
@@ -97,7 +104,10 @@ export class RestateContext {
 
     // ── Workflow durable promises (WorkflowContext/WorkflowSharedContext only) ──
 
-    promise<T>(name: string): DurablePromise<T> {
+    promise<T>(name: string, serde?: Serde<T>): DurablePromise<T> {
+        if (serde !== undefined) {
+            return this.ctx.promise(name, serde);
+        }
         return this.ctx.promise(name);
     }
 

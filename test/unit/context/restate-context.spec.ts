@@ -140,12 +140,31 @@ describe("RestateContext", () => {
             expect(result).toBe(42);
         });
 
+        it("should delegate get() with serde to SDK context", async () => {
+            const mockSerde = { serialize: vi.fn(), deserialize: vi.fn() };
+            const mockCtx = { get: vi.fn().mockResolvedValue(42) };
+
+            const result = await runWithContext(mockCtx, () => ctx.get("count", mockSerde));
+
+            expect(mockCtx.get).toHaveBeenCalledWith("count", mockSerde);
+            expect(result).toBe(42);
+        });
+
         it("should delegate set() to SDK context", () => {
             const mockCtx = { set: vi.fn() };
 
             runWithContext(mockCtx, () => ctx.set("count", 42));
 
             expect(mockCtx.set).toHaveBeenCalledWith("count", 42);
+        });
+
+        it("should delegate set() with serde to SDK context", () => {
+            const mockSerde = {} as any;
+            const mockCtx = { set: vi.fn() };
+
+            runWithContext(mockCtx, () => ctx.set("count", 42, mockSerde));
+
+            expect(mockCtx.set).toHaveBeenCalledWith("count", 42, mockSerde);
         });
 
         it("should delegate clear() to SDK context", () => {
@@ -181,6 +200,17 @@ describe("RestateContext", () => {
             const result = runWithContext(mockCtx, () => ctx.promise("payment-done"));
 
             expect(mockCtx.promise).toHaveBeenCalledWith("payment-done");
+            expect(result).toBe(mockPromise);
+        });
+
+        it("should delegate promise() with serde to SDK context", () => {
+            const mockSerde = {} as any;
+            const mockPromise = { peek: vi.fn(), resolve: vi.fn(), reject: vi.fn() };
+            const mockCtx = { promise: vi.fn().mockReturnValue(mockPromise) };
+
+            const result = runWithContext(mockCtx, () => ctx.promise("payment-done", mockSerde));
+
+            expect(mockCtx.promise).toHaveBeenCalledWith("payment-done", mockSerde);
             expect(result).toBe(mockPromise);
         });
     });
