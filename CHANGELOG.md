@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.0.0...nestjs-restate-v2.1.0) (2026-03-02)
+
+
+### Features
+
+* expose full Restate SDK context surface on RestateContext ([#9](https://github.com/zackautocracy/nestjs-restate/issues/9)) ([67d04b0](https://github.com/zackautocracy/nestjs-restate/commit/67d04b0a5fa3d9d35313b2d0e424e41595b3af8d))
+
+
+### Documentation
+
+* add Ask DeepWiki badge to README ([e329c27](https://github.com/zackautocracy/nestjs-restate/commit/e329c27fd6c2aeaf284e169979302788008be732))
+
 ## [2.0.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v1.1.0...nestjs-restate-v2.0.0) (2026-03-02)
 
 
