@@ -3,12 +3,6 @@ name: Release Please
 on:
   push:
     branches: [main]
-    paths:
-      - "lib/**"
-      - "package.json"
-      - "tsconfig.json"
-      - "tsdown.config.ts"
-      - ".github/workflows/release-please.yml"
   workflow_dispatch:
 
 permissions:
