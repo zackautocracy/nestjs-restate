@@ -232,8 +232,8 @@ export class DashboardService {
     ) {}
 
     async incrementUser(userId: string) {
-        await this.counter.increment({ amount: 1 }, { key: userId });
-        return this.counter.getCount(undefined, { key: userId });
+        await this.counter.key(userId).increment({ amount: 1 });
+        return this.counter.key(userId).getCount();
     }
 }
 ```
@@ -290,14 +290,14 @@ export class CheckoutService {
     ) {}
 
     async startPayment(orderId: string, amount: number) {
-        // Start (non-blocking)
-        await this.payment.workflowSubmit({ orderId, amount }, { key: orderId });
+        // Start (non-blocking — fire-and-forget via .send)
+        this.payment.key(orderId).send.run({ orderId, amount });
 
-        // Wait for result
-        const result = await this.payment.workflowAttach(undefined, { key: orderId });
+        // Or start and await the result (blocking)
+        const result = await this.payment.key(orderId).run({ orderId, amount });
 
         // Signal the running workflow
-        await this.payment.confirmPayment({ confirmationId: 'conf-123' }, { key: orderId });
+        await this.payment.key(orderId).confirmPayment({ confirmationId: 'conf-123' });
     }
 }
 ```

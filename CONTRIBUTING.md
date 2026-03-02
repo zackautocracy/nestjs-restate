@@ -27,7 +27,6 @@ yarn install        # Install dependencies
 | `yarn lint:fix` | Auto-fix lint and formatting |
 | `yarn check:types` | Type-check with tsc |
 | `yarn check:all` | Run all checks (lint, types, build, test, exports, package) |
-| `yarn example:client` | Run SDK client against the example app |
 
 ### Running the Example App
 
@@ -48,52 +47,50 @@ Once running, the example registers itself with the Restate server automatically
 
 #### Sending Requests
 
-The easiest way to interact with the example services is the SDK client script:
+The example exposes a REST controller and Restate components. Use curl to interact:
+
+**Add items to a cart** (virtual object with keyed state):
 
 ```sh
-yarn example:client
-```
-
-This runs all three examples (counter, user session, signup workflow) using `@restatedev/restate-sdk-clients` and prints the results.
-
-<details>
-<summary>Or use curl</summary>
-
-**Counter service** (stateless RPC):
-
-```sh
-curl -X POST http://localhost:8080/counter/add \
+curl -X POST http://localhost:3000/cart/alice/items \
   -H 'content-type: application/json' \
-  -d '{"a": 3, "b": 7}'
+  -d '{"productId": "p1", "name": "Widget", "price": 12.50, "quantity": 2}'
+
+# Read cart (shared handler — concurrent reads)
+curl http://localhost:3000/cart/alice
 ```
 
-**User session** (virtual object with keyed state):
+**Charge a payment** (stateless durable service):
 
 ```sh
-# Log in
-curl -X POST http://localhost:8080/user-session/alice/login \
+curl -X POST http://localhost:3000/payments/charge \
   -H 'content-type: application/json' \
-  -d '"alice"'
-
-# Get session (shared handler — concurrent reads)
-curl -X POST http://localhost:8080/user-session/alice/getSession
+  -d '{"amount": 25.00, "currency": "USD"}'
 ```
 
-**Signup workflow** (durable execution with signals):
+**Run the order workflow** (durable execution with signals):
 
 ```sh
-# Start a signup workflow
-curl -X POST http://localhost:8080/signup/user-123/run \
+# Start an order (blocks until shipment is confirmed)
+curl -X POST http://localhost:3000/orders \
   -H 'content-type: application/json' \
-  -d '{"email": "test@example.com", "name": "Test User"}'
+  -d '{"userId": "alice", "orderId": "order-1"}'
 
-# In another terminal, send the verification signal
-curl -X POST http://localhost:8080/signup/user-123/verifyEmail
+# In another terminal, confirm shipment to unblock the workflow
+curl -X POST http://localhost:3000/orders/order-1/confirm-shipment \
+  -H 'content-type: application/json' \
+  -d '{"trackingNumber": "TRACK-123"}'
 ```
 
-The workflow will block at the `ctx.promise("email-verified")` call until `verifyEmail` is invoked, demonstrating durable execution and signaling.
+The workflow blocks at `ctx.promise("shipment-confirmed")` until `confirmShipment` is called, demonstrating durable execution and signaling.
 
-</details>
+You can also call Restate components directly via the Restate ingress (port 8080):
+
+```sh
+curl -X POST http://localhost:8080/payment/charge \
+  -H 'content-type: application/json' \
+  -d '{"amount": 25.00, "currency": "USD"}'
+```
 
 #### Stopping
 
@@ -105,9 +102,12 @@ yarn docker:down
 
 ```text
 lib/
+├── context/             # RestateContext injectable + AsyncLocalStorage context store
 ├── decorators/          # @Service, @VirtualObject, @Workflow, @Handler, @Run, @Shared, @InjectClient
 ├── discovery/           # RestateExplorer — discovers decorated classes via NestJS DiscoveryService
 ├── endpoint/            # RestateEndpointManager — manages HTTP/2 server lifecycle
+├── proxy/               # Typed client proxy factory + DI token management
+├── registry/            # Global component registry for auto-discovery
 ├── restate.module.ts    # RestateModule.forRoot() / forRootAsync()
 ├── restate.constants.ts # DI tokens
 └── restate.interfaces.ts # Type definitions
@@ -115,7 +115,7 @@ lib/
 
 ## Testing
 
-Unit tests mirror the source structure under `test/unit/`. E2E tests with a real Restate server (via testcontainers) are in `test/e2e/`.
+Unit tests mirror the source structure under `test/unit/`. E2E tests with a real Restate server (via testcontainers) are in `test/e2e/`, with the test fixture in `test/e2e/fixture/` mirroring the example app's feature-module structure.
 
 ```sh
 yarn test          # Unit tests only (fast, no Docker)
