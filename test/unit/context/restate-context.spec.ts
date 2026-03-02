@@ -25,6 +25,29 @@ describe("RestateContext", () => {
             expect(result).toBe("result");
         });
 
+        it("should delegate run() with action only (nameless)", async () => {
+            const mockRun = vi.fn().mockResolvedValue("result");
+            const mockCtx = { run: mockRun };
+
+            const result = await runWithContext(mockCtx, () => ctx.run(() => "result"));
+
+            expect(mockRun).toHaveBeenCalledWith(expect.any(Function));
+            expect(result).toBe("result");
+        });
+
+        it("should delegate run() with name, action, and options", async () => {
+            const mockRun = vi.fn().mockResolvedValue("result");
+            const mockCtx = { run: mockRun };
+            const options = { maxRetryAttempts: 3 };
+
+            const result = await runWithContext(mockCtx, () =>
+                ctx.run("step", () => "result", options),
+            );
+
+            expect(mockRun).toHaveBeenCalledWith("step", expect.any(Function), options);
+            expect(result).toBe("result");
+        });
+
         it("should delegate sleep() to SDK context", async () => {
             const mockSleep = vi.fn().mockResolvedValue(undefined);
             const mockCtx = { sleep: mockSleep };
@@ -32,6 +55,15 @@ describe("RestateContext", () => {
             await runWithContext(mockCtx, () => ctx.sleep(1000));
 
             expect(mockSleep).toHaveBeenCalledWith(1000);
+        });
+
+        it("should delegate sleep() with name parameter", async () => {
+            const mockSleep = vi.fn().mockResolvedValue(undefined);
+            const mockCtx = { sleep: mockSleep };
+
+            await runWithContext(mockCtx, () => ctx.sleep(1000, "wait-for-payment"));
+
+            expect(mockSleep).toHaveBeenCalledWith(1000, "wait-for-payment");
         });
     });
 
@@ -53,12 +85,45 @@ describe("RestateContext", () => {
             expect(mockCtx.resolveAwakeable).toHaveBeenCalledWith("awk-1", "value");
         });
 
+        it("should delegate resolveAwakeable() without payload", () => {
+            const mockCtx = { resolveAwakeable: vi.fn() };
+
+            runWithContext(mockCtx, () => ctx.resolveAwakeable("awk-1"));
+
+            expect(mockCtx.resolveAwakeable).toHaveBeenCalledWith("awk-1");
+        });
+
         it("should delegate rejectAwakeable() to SDK context", () => {
             const mockCtx = { rejectAwakeable: vi.fn() };
 
             runWithContext(mockCtx, () => ctx.rejectAwakeable("awk-1", "reason"));
 
             expect(mockCtx.rejectAwakeable).toHaveBeenCalledWith("awk-1", "reason");
+        });
+
+        it("should delegate awakeable() with serde parameter", () => {
+            const mockResult = {
+                id: "awk-1",
+                promise: Promise.resolve("val"),
+            };
+            const mockCtx = {
+                awakeable: vi.fn().mockReturnValue(mockResult),
+            };
+            const mockSerde = {} as any;
+
+            const result = runWithContext(mockCtx, () => ctx.awakeable(mockSerde));
+
+            expect(mockCtx.awakeable).toHaveBeenCalledWith(mockSerde);
+            expect(result).toBe(mockResult);
+        });
+
+        it("should delegate resolveAwakeable() with serde parameter", () => {
+            const mockCtx = { resolveAwakeable: vi.fn() };
+            const mockSerde = {} as any;
+
+            runWithContext(mockCtx, () => ctx.resolveAwakeable("awk-1", "value", mockSerde));
+
+            expect(mockCtx.resolveAwakeable).toHaveBeenCalledWith("awk-1", "value", mockSerde);
         });
     });
 
@@ -83,12 +148,31 @@ describe("RestateContext", () => {
             expect(result).toBe(42);
         });
 
+        it("should delegate get() with serde to SDK context", async () => {
+            const mockSerde = {} as any;
+            const mockCtx = { get: vi.fn().mockResolvedValue(42) };
+
+            const result = await runWithContext(mockCtx, () => ctx.get("count", mockSerde));
+
+            expect(mockCtx.get).toHaveBeenCalledWith("count", mockSerde);
+            expect(result).toBe(42);
+        });
+
         it("should delegate set() to SDK context", () => {
             const mockCtx = { set: vi.fn() };
 
             runWithContext(mockCtx, () => ctx.set("count", 42));
 
             expect(mockCtx.set).toHaveBeenCalledWith("count", 42);
+        });
+
+        it("should delegate set() with serde to SDK context", () => {
+            const mockSerde = {} as any;
+            const mockCtx = { set: vi.fn() };
+
+            runWithContext(mockCtx, () => ctx.set("count", 42, mockSerde));
+
+            expect(mockCtx.set).toHaveBeenCalledWith("count", 42, mockSerde);
         });
 
         it("should delegate clear() to SDK context", () => {
@@ -126,6 +210,17 @@ describe("RestateContext", () => {
             expect(mockCtx.promise).toHaveBeenCalledWith("payment-done");
             expect(result).toBe(mockPromise);
         });
+
+        it("should delegate promise() with serde to SDK context", () => {
+            const mockSerde = {} as any;
+            const mockPromise = { peek: vi.fn(), resolve: vi.fn(), reject: vi.fn() };
+            const mockCtx = { promise: vi.fn().mockReturnValue(mockPromise) };
+
+            const result = runWithContext(mockCtx, () => ctx.promise("payment-done", mockSerde));
+
+            expect(mockCtx.promise).toHaveBeenCalledWith("payment-done", mockSerde);
+            expect(result).toBe(mockPromise);
+        });
     });
 
     describe("object key", () => {
@@ -145,6 +240,103 @@ describe("RestateContext", () => {
             const result = runWithContext(mockCtx, () => ctx.raw);
 
             expect(result).toBe(mockCtx);
+        });
+    });
+
+    describe("console", () => {
+        it("should delegate console to SDK context", () => {
+            const mockConsole = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
+            const mockCtx = { console: mockConsole };
+
+            const result = runWithContext(mockCtx, () => ctx.console);
+
+            expect(result).toBe(mockConsole);
+        });
+    });
+
+    describe("date", () => {
+        it("should delegate date to SDK context", () => {
+            const mockDate = { now: vi.fn(), toJSON: vi.fn() };
+            const mockCtx = { date: mockDate };
+
+            const result = runWithContext(mockCtx, () => ctx.date);
+
+            expect(result).toBe(mockDate);
+        });
+    });
+
+    describe("invocation management", () => {
+        it("should delegate request() to SDK context", () => {
+            const mockRequest = { id: "inv-1", headers: new Map() };
+            const mockCtx = {
+                request: vi.fn().mockReturnValue(mockRequest),
+            };
+
+            const result = runWithContext(mockCtx, () => ctx.request());
+
+            expect(result).toBe(mockRequest);
+        });
+
+        it("should delegate cancel() to SDK context", () => {
+            const mockCtx = { cancel: vi.fn() };
+
+            runWithContext(mockCtx, () => ctx.cancel("inv-123" as any));
+
+            expect(mockCtx.cancel).toHaveBeenCalledWith("inv-123");
+        });
+
+        it("should delegate attach() to SDK context", async () => {
+            const mockCtx = {
+                attach: vi.fn().mockResolvedValue("result"),
+            };
+
+            const result = await runWithContext(mockCtx, () => ctx.attach("inv-123" as any));
+
+            expect(mockCtx.attach).toHaveBeenCalledWith("inv-123");
+            expect(result).toBe("result");
+        });
+
+        it("should delegate attach() with serde to SDK context", async () => {
+            const mockSerde = {} as any;
+            const mockCtx = {
+                attach: vi.fn().mockResolvedValue("result"),
+            };
+
+            const result = await runWithContext(mockCtx, () =>
+                ctx.attach("inv-123" as any, mockSerde),
+            );
+
+            expect(mockCtx.attach).toHaveBeenCalledWith("inv-123", mockSerde);
+            expect(result).toBe("result");
+        });
+    });
+
+    describe("generic calls", () => {
+        it("should delegate genericCall() to SDK context", async () => {
+            const mockCtx = {
+                genericCall: vi.fn().mockResolvedValue("result"),
+            };
+            const call = { service: "svc", method: "m", parameter: {} };
+
+            const result = await runWithContext(mockCtx, () => ctx.genericCall(call as any));
+
+            expect(mockCtx.genericCall).toHaveBeenCalledWith(call);
+            expect(result).toBe("result");
+        });
+
+        it("should delegate genericSend() to SDK context", () => {
+            const mockHandle = {
+                invocationId: Promise.resolve("id"),
+            };
+            const mockCtx = {
+                genericSend: vi.fn().mockReturnValue(mockHandle),
+            };
+            const send = { service: "svc", method: "m", parameter: {} };
+
+            const result = runWithContext(mockCtx, () => ctx.genericSend(send as any));
+
+            expect(mockCtx.genericSend).toHaveBeenCalledWith(send);
+            expect(result).toBe(mockHandle);
         });
     });
 

@@ -6,13 +6,10 @@
 ### ⚠ BREAKING CHANGES
 
 * Handlers no longer receive SDK context as first parameter. Use injected RestateContext instead. See MIGRATION.md for the upgrade guide.
-* Handler methods no longer receive SDK context as first parameter. Use constructor-injected RestateContext instead. See MIGRATION.md for upgrade guide.
 
 ### Features
 
 * v2.0.0 — NestJS-Native Restate Experience ([#6](https://github.com/zackautocracy/nestjs-restate/issues/6)) ([e61cc6a](https://github.com/zackautocracy/nestjs-restate/commit/e61cc6adbad1c82e12a54102ae89010730fd3282))
-* v2.0.0 NestJS-native Restate experience ([e3c9023](https://github.com/zackautocracy/nestjs-restate/commit/e3c902397df9294c342cbae120f1ddc353a3cb78))
-* v2.0.0 NestJS-native Restate experience ([5ba4be6](https://github.com/zackautocracy/nestjs-restate/commit/5ba4be606c32ca41a7da7e26a0bca83d898261a7))
 
 
 ### Documentation

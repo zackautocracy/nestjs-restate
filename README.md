@@ -36,10 +36,10 @@ npm install nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clien
 
 | Package | Version |
 |---|---|
-| `@nestjs/common` | `>=10.0.0` |
-| `@nestjs/core` | `>=10.0.0` |
-| `@restatedev/restate-sdk` | `>=1.8.0` |
-| `@restatedev/restate-sdk-clients` | `>=1.8.0` |
+| `@nestjs/common` | `^10.0.0 \|\| ^11.0.0` |
+| `@nestjs/core` | `^10.0.0 \|\| ^11.0.0` |
+| `@restatedev/restate-sdk` | `^1.10.4` |
+| `@restatedev/restate-sdk-clients` | `^1.10.4` |
 
 ## Quick Start
 
@@ -151,6 +151,26 @@ All class decorators implicitly apply `@Injectable()`.
 | `RestateContext` | Injectable wrapper around the Restate SDK context — automatically scoped to the current request via `AsyncLocalStorage` |
 
 Component and handler decorators (`@Service`, `@VirtualObject`, `@Workflow`, `@Handler`, `@Run`, `@Signal`, `@Shared`) also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
+
+### Context API
+
+`RestateContext` exposes the full Restate SDK context surface. All methods delegate to the underlying SDK — no custom behavior is added.
+
+| Category | Method | Description |
+|----------|--------|-------------|
+| Durable Execution | `run(action)`, `run(name, action)`, `run(name, action, options)` | Execute and persist side effects |
+| Timers | `sleep(duration, name?)` | Durable sleep |
+| Awakeables | `awakeable(serde?)`, `resolveAwakeable(id, payload?, serde?)`, `rejectAwakeable(id, reason)` | External event completion |
+| State | `get(key, serde?)`, `set(key, value, serde?)`, `clear(key)`, `clearAll()`, `stateKeys()` | Key-value store (objects/workflows) |
+| Promises | `promise(name, serde?)` | Workflow durable promises |
+| Invocations | `request()`, `cancel(invocationId)`, `attach(invocationId, serde?)` | Invocation lifecycle |
+| Generic Calls | `genericCall(call)`, `genericSend(call)` | Untyped service invocation |
+| Deterministic | `rand`, `date` | Seeded random & deterministic clock |
+| Observability | `console` | Replay-aware logging |
+| Identity | `key` | Object/workflow key |
+| Escape Hatch | `raw` | Direct SDK context access |
+
+For service-to-service calls, use `@InjectClient()` with typed proxies instead of `ctx.serviceClient()`. See [Typed Service Proxies](#4-call-it).
 
 ## Services
 
