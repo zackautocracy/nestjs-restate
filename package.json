@@ -89,6 +89,23 @@
         "vitest": "^4.0.18"
     },
     "packageManager": "yarn@4.12.0",
+    "dependenciesMeta": {
+        "@swc/core": {
+            "built": true
+        },
+        "cpu-features": {
+            "built": true
+        },
+        "esbuild": {
+            "built": true
+        },
+        "protobufjs": {
+            "built": true
+        },
+        "ssh2": {
+            "built": true
+        }
+    },
     "lint-staged": {
         "*.{ts,js,json,md}": [
             "biome check --write --no-errors-on-unmatched"
