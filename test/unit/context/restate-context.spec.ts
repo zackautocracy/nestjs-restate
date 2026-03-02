@@ -56,6 +56,15 @@ describe("RestateContext", () => {
 
             expect(mockSleep).toHaveBeenCalledWith(1000);
         });
+
+        it("should delegate sleep() with name parameter", async () => {
+            const mockSleep = vi.fn().mockResolvedValue(undefined);
+            const mockCtx = { sleep: mockSleep };
+
+            await runWithContext(mockCtx, () => ctx.sleep(1000, "wait-for-payment"));
+
+            expect(mockSleep).toHaveBeenCalledWith(1000, "wait-for-payment");
+        });
     });
 
     describe("awakeables", () => {
@@ -82,6 +91,31 @@ describe("RestateContext", () => {
             runWithContext(mockCtx, () => ctx.rejectAwakeable("awk-1", "reason"));
 
             expect(mockCtx.rejectAwakeable).toHaveBeenCalledWith("awk-1", "reason");
+        });
+
+        it("should delegate awakeable() with serde parameter", () => {
+            const mockResult = {
+                id: "awk-1",
+                promise: Promise.resolve("val"),
+            };
+            const mockCtx = {
+                awakeable: vi.fn().mockReturnValue(mockResult),
+            };
+            const mockSerde = {} as any;
+
+            const result = runWithContext(mockCtx, () => ctx.awakeable(mockSerde));
+
+            expect(mockCtx.awakeable).toHaveBeenCalledWith(mockSerde);
+            expect(result).toBe(mockResult);
+        });
+
+        it("should delegate resolveAwakeable() with serde parameter", () => {
+            const mockCtx = { resolveAwakeable: vi.fn() };
+            const mockSerde = {} as any;
+
+            runWithContext(mockCtx, () => ctx.resolveAwakeable("awk-1", "value", mockSerde));
+
+            expect(mockCtx.resolveAwakeable).toHaveBeenCalledWith("awk-1", "value", mockSerde);
         });
     });
 

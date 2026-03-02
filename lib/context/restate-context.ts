@@ -37,18 +37,30 @@ export class RestateContext {
         return this.ctx.run(...args);
     }
 
-    sleep(duration: Duration): Promise<void> {
+    sleep(duration: Duration | number, name?: string): RestatePromise<void> {
+        if (name !== undefined) {
+            return this.ctx.sleep(duration, name);
+        }
         return this.ctx.sleep(duration);
     }
 
     // ── External events ──
 
-    awakeable<T>(): { id: string; promise: Promise<T> } {
+    awakeable<T>(serde?: Serde<T>): { id: string; promise: RestatePromise<T> } {
+        if (serde !== undefined) {
+            return this.ctx.awakeable(serde);
+        }
         return this.ctx.awakeable();
     }
 
-    resolveAwakeable<T>(id: string, value: T): void {
-        this.ctx.resolveAwakeable(id, value);
+    resolveAwakeable<T>(id: string, payload?: T, serde?: Serde<T>): void {
+        if (serde !== undefined) {
+            this.ctx.resolveAwakeable(id, payload, serde);
+        } else if (payload !== undefined) {
+            this.ctx.resolveAwakeable(id, payload);
+        } else {
+            this.ctx.resolveAwakeable(id);
+        }
     }
 
     rejectAwakeable(id: string, reason: string): void {
