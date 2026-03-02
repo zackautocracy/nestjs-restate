@@ -13,6 +13,7 @@ export { RESTATE_CLIENT } from "./restate.constants";
 
 // Types
 export type {
+    AutoRegisterOptions,
     EndpointConfig,
     RestateModuleAsyncOptions,
     RestateModuleOptions,

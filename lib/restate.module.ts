@@ -87,20 +87,23 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
     }
 
     private async registerDeployment(): Promise<void> {
-        const listeningPort = this.endpointManager.getListeningPort();
+        const { autoRegister, admin } = this.options;
 
-        if (listeningPort === null || !this.options.admin) {
-            RestateModule.logger.warn(
-                "Auto-registration requires a port-based endpoint and admin URL",
-            );
+        if (!autoRegister || !admin) {
             return;
         }
 
+        const listeningPort = this.endpointManager.getListeningPort();
+        const deploymentUrl = autoRegister.deploymentUrl.replace(
+            "{{port}}",
+            listeningPort !== null ? String(listeningPort) : "",
+        );
+
         try {
-            const url = `${this.options.admin}/deployments`;
+            const url = `${admin}/deployments`;
             const body = JSON.stringify({
-                uri: `http://host.docker.internal:${listeningPort}`,
-                force: true,
+                uri: deploymentUrl,
+                force: autoRegister.force ?? true,
             });
 
             const response = await fetch(url, {
@@ -111,7 +114,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
             if (response.ok) {
                 RestateModule.logger.log(
-                    `Deployment auto-registered with Restate server at ${this.options.admin}`,
+                    `Deployment auto-registered at ${admin} with URI ${deploymentUrl}`,
                 );
             } else {
                 const text = await response.text();

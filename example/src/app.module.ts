@@ -10,7 +10,9 @@ import { UserSessionObject } from "./user-session.object";
             ingress: "http://localhost:8080",
             admin: "http://localhost:9070",
             endpoint: { port: 9080 },
-            autoRegister: true,
+            autoRegister: {
+                deploymentUrl: "http://host.docker.internal:9080",
+            },
         }),
     ],
     providers: [CounterService, UserSessionObject, SignupWorkflow],
