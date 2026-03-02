@@ -149,8 +149,9 @@ describe("nestjs-restate E2E", () => {
 
     afterAll(async () => {
         await app?.close();
-        await restateContainer?.stop();
-    }, 60_000);
+        // Testcontainers stop can be slow on CI — force-kill after 10s
+        await restateContainer?.stop({ timeout: 10_000 });
+    }, 120_000);
 
     describe("Service", () => {
         it("should invoke counter.add and return the sum", async () => {
