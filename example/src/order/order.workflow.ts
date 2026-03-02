@@ -5,6 +5,7 @@ import {
     Run,
     type ServiceClient,
     Signal,
+    TerminalError,
     Workflow,
 } from "nestjs-restate";
 import { CartObject } from "../cart/cart.object";
@@ -35,7 +36,9 @@ export class OrderWorkflow {
         const items = await this.cart.key(input.userId).getItems();
 
         if (items.length === 0) {
-            throw new Error(`Cart is empty for user ${input.userId}`);
+            throw new TerminalError(`Cart is empty for user ${input.userId}`, {
+                errorCode: 400,
+            });
         }
 
         const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);

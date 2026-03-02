@@ -17,7 +17,16 @@ export type {
     WorkflowOptions,
     WorkflowSharedContext,
 } from "@restatedev/restate-sdk";
-export { rpc, SendOpts } from "@restatedev/restate-sdk";
+// Error classes — re-exported for convenience
+export {
+    CancelledError,
+    RestateError,
+    RetryableError,
+    rpc,
+    SendOpts,
+    TerminalError,
+    TimeoutError,
+} from "@restatedev/restate-sdk";
 // Context
 export { RestateContext } from "./context/restate-context";
 export { getCurrentContext } from "./context/restate-context.store";

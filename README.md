@@ -304,6 +304,83 @@ export class CheckoutService {
 }
 ```
 
+## Error Handling
+
+Restate automatically **retries** handler invocations when they fail. Understanding when to stop retries is key to building correct services.
+
+### Terminal vs Retryable Errors
+
+| Error type | Restate behavior |
+|---|---|
+| Regular `Error` | **Retried** according to the retry policy (default: infinite) |
+| `TerminalError` | **Not retried** — failure is written as output and returned to the caller |
+| `RetryableError` | **Retried** with an optional `retryAfter` delay hint |
+| `TimeoutError` | `TerminalError` subclass (code 408) — returned by `ctx.promise().orTimeout()` |
+| `CancelledError` | `TerminalError` subclass (code 409) — when an invocation is cancelled |
+
+### Usage
+
+Use `TerminalError` for non-retryable failures like validation errors, business rule violations, or permanent failures:
+
+```typescript
+import { Service, Handler, RestateContext, TerminalError } from 'nestjs-restate';
+
+@Service('orders')
+export class OrderService {
+    constructor(private readonly ctx: RestateContext) {}
+
+    @Handler()
+    async placeOrder(input: { userId: string; items: string[] }) {
+        if (input.items.length === 0) {
+            // Won't retry — this is a client error
+            throw new TerminalError('Cart is empty', { errorCode: 400 });
+        }
+
+        // Regular errors (e.g., network failures) are retried automatically
+        await this.ctx.run('charge-payment', () => paymentGateway.charge(input));
+    }
+}
+```
+
+### Global Error Mapping
+
+Use `asTerminalError` to automatically convert domain-specific errors into terminal errors:
+
+```typescript
+RestateModule.forRoot({
+    ingress: 'http://restate:8080',
+    endpoint: { port: 9080 },
+    defaultServiceOptions: {
+        asTerminalError: (error) => {
+            if (error instanceof ValidationError) {
+                return new TerminalError(error.message, { errorCode: 400 });
+            }
+            if (error instanceof NotFoundError) {
+                return new TerminalError(error.message, { errorCode: 404 });
+            }
+            // Return undefined → Restate retries as normal
+        },
+    },
+})
+```
+
+This also works per-component via decorator options:
+
+```typescript
+@Service({
+    name: 'payments',
+    options: {
+        asTerminalError: (error) => {
+            if (error instanceof InsufficientFundsError) {
+                return new TerminalError('Insufficient funds', { errorCode: 402 });
+            }
+        },
+    },
+})
+```
+
+All error classes (`TerminalError`, `RetryableError`, `TimeoutError`, `CancelledError`, `RestateError`) are re-exported from `nestjs-restate`.
+
 ## Configuration
 
 ### Module Options
