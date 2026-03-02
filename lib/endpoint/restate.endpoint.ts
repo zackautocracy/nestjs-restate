@@ -24,6 +24,10 @@ export class RestateEndpointManager {
     }
 
     async start(config: EndpointConfig): Promise<void> {
+        if (this.endpointHandler || this.httpServer) {
+            throw new Error("Restate endpoint already started. Call stop() before start().");
+        }
+
         if (this.definitions.length === 0) {
             this.logger.warn("No Restate definitions to serve");
             return;
@@ -88,10 +92,10 @@ export class RestateEndpointManager {
                 server.off("request", this.endpointHandler);
                 this.logger.log("Restate endpoint detached from existing HTTP/2 server");
             }
-            this.httpServer = null;
-            this.ownsHttpServer = false;
-            this.endpointHandler = null;
         }
+        this.httpServer = null;
+        this.ownsHttpServer = false;
+        this.endpointHandler = null;
         this.listeningPort = null;
     }
 
