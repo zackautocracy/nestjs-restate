@@ -55,7 +55,6 @@
         "check:all": "yarn lint && yarn check:types && yarn build && yarn test && yarn check:exports && yarn check:package && yarn check:unused",
         "example": "yarn build && tsx --tsconfig example/tsconfig.json example/src/main.ts",
         "example:dev": "tsx watch --tsconfig example/tsconfig.json example/src/main.ts",
-        "example:client": "tsx --tsconfig example/tsconfig.json example/src/client.ts",
         "docker:up": "docker compose up -d",
         "docker:down": "docker compose down",
         "prepare": "husky"
