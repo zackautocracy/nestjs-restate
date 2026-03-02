@@ -36,12 +36,13 @@ export class OrderWorkflow {
         const items = await this.cart.key(input.userId).getItems();
 
         if (items.length === 0) {
-            throw new TerminalError(`Cart is empty for user ${input.userId}`, {
+            throw new TerminalError("Cart is empty", {
                 errorCode: 400,
             });
         }
 
-        const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const rawTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const total = Math.round(rawTotal * 100) / 100;
 
         this.ctx.console.log(`Order ${orderId}: ${items.length} items, total $${total.toFixed(2)}`);
 
@@ -66,6 +67,9 @@ export class OrderWorkflow {
 
     @Signal()
     async confirmShipment(input: { trackingNumber: string }): Promise<void> {
+        if (!input.trackingNumber?.trim()) {
+            throw new TerminalError("trackingNumber is required");
+        }
         await this.ctx.promise<string>("shipment-confirmed").resolve(input.trackingNumber);
     }
 }

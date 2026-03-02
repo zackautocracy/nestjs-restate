@@ -277,7 +277,7 @@ export class PaymentWorkflow {
 ```
 
 **Key rules:**
-- Exactly **one** `@Run()` per workflow
+- Exactly **one** `@Run()` per workflow — the method **must** be named `run`
 - `@Signal()` methods can be called concurrently while the workflow is running
 - Use `this.ctx.promise()` for durable signals between run and signal handlers
 
