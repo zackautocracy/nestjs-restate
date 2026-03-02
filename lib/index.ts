@@ -10,6 +10,9 @@ export type {
     InvocationHandle,
     InvocationId,
     InvocationPromise,
+    LoggerContext,
+    LoggerTransport,
+    LogMetadata,
     ObjectContext,
     ObjectHandlerOpts,
     ObjectOptions,
@@ -53,6 +56,9 @@ export {
     VirtualObject,
     Workflow,
 } from "./decorators";
+// Logging
+export { RestateLoggerService } from "./logging/restate-logger.service";
+export { createRestateLoggerTransport } from "./logging/restate-logger.transport";
 
 // Proxy types
 export type {

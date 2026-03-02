@@ -13,6 +13,7 @@ import * as clients from "@restatedev/restate-sdk-clients";
 import { RestateContext } from "./context/restate-context";
 import { RestateExplorer } from "./discovery/restate.explorer";
 import { RestateEndpointManager } from "./endpoint/restate.endpoint";
+import { RestateLoggerService } from "./logging/restate-logger.service";
 import { createClientProxy } from "./proxy/client-proxy";
 import { getClientToken } from "./proxy/client-token";
 import { getRegisteredComponents } from "./registry/component-registry";
@@ -87,6 +88,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
     }
 
     async onModuleInit(): Promise<void> {
+        Logger.overrideLogger(new RestateLoggerService());
         const definitions = this.explorer.discover();
 
         for (const def of definitions) {

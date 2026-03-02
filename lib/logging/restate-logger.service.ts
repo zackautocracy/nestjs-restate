@@ -38,7 +38,7 @@ export class RestateLoggerService implements LoggerService {
         if (ctx) {
             ctx.console[consoleMethod](message, ...optionalParams);
         } else {
-            (this.fallback[nestLevel] as (...args: never) => unknown)(message, ...optionalParams);
+            (this.fallback[nestLevel] as (...args: any[]) => unknown)(message, ...optionalParams);
         }
     }
 }
