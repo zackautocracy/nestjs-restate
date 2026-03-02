@@ -1,0 +1,78 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below so we can reproduce and fix it.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug.
+      placeholder: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps or code to reproduce the issue.
+      placeholder: |
+        1. Configure RestateModule with ...
+        2. Create a service with ...
+        3. Call the handler ...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages or stack traces if applicable.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: nestjs-restate version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: node-version
+    attributes:
+      label: Node.js version
+      options:
+        - "18.x"
+        - "20.x"
+        - "22.x"
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: restate-version
+    attributes:
+      label: Restate SDK / Server version
+      placeholder: "@restatedev/restate-sdk 2.x, restate-server 1.x"
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, logs, or screenshots.

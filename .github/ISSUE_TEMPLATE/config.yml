@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Restate Documentation
+    url: https://docs.restate.dev
+    about: Official Restate documentation
+  - name: Restate Discord
+    url: https://discord.gg/restate
+    about: Join the Restate community on Discord
