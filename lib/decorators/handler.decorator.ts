@@ -5,8 +5,11 @@ function createHandlerDecorator(type: HandlerType): (options?: AnyHandlerOpts) =
     return (options?: AnyHandlerOpts) => {
         return (target: object, propertyKey: string | symbol) => {
             const ctor = target.constructor;
-            const existing: HandlerMetadata[] =
-                Reflect.getMetadata(HANDLER_METADATA_KEY, ctor) || [];
+            // Clone the array to prevent mutating a parent class's metadata
+            // when decorating a subclass (Reflect.getMetadata walks the prototype chain).
+            const existing: HandlerMetadata[] = [
+                ...(Reflect.getMetadata(HANDLER_METADATA_KEY, ctor) || []),
+            ];
 
             existing.push({
                 type,

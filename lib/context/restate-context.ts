@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type {
     Context,
     DurablePromise,
+    Duration,
     ObjectContext,
     ObjectSharedContext,
     Rand,
@@ -9,8 +10,6 @@ import type {
     WorkflowSharedContext,
 } from "@restatedev/restate-sdk";
 import { getCurrentContext } from "./restate-context.store";
-
-type Duration = number | { seconds?: number; minutes?: number; hours?: number; days?: number };
 
 @Injectable()
 export class RestateContext {

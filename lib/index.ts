@@ -3,6 +3,7 @@ export type {
     Context,
     DefaultServiceOptions,
     DurablePromise,
+    Duration,
     InvocationHandle,
     ObjectContext,
     ObjectHandlerOpts,

@@ -92,7 +92,7 @@ Auto-discovery handles the rest — no manual registration with the Restate endp
 
 ### 4. Call it
 
-**Typed proxy** (recommended) — any `@Service`, `@VirtualObject`, or `@Workflow` class is auto-discovered and available for injection:
+**Typed proxy** (recommended for inter-service calls) — any `@Service`, `@VirtualObject`, or `@Workflow` class is auto-discovered and available for injection. Typed proxies use `AsyncLocalStorage` and **only work inside Restate handler methods** (i.e., methods decorated with `@Handler()`, `@Run()`, or `@Shared()`):
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -111,7 +111,7 @@ export class AppService {
 }
 ```
 
-**Raw Ingress client** — for full SDK access:
+**Raw Ingress client** — for calling Restate services from outside handler context (REST controllers, cron jobs, etc.):
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -141,8 +141,8 @@ All class decorators implicitly apply `@Injectable()`.
 | `@Handler()` | Handler method on `@Service`, or exclusive handler on `@VirtualObject` |
 | `@Shared()` | Concurrent handler on `@Workflow` or `@VirtualObject` |
 | `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
-| `@InjectClient()` | Injects the Restate `Ingress` client (raw SDK access) |
-| `@InjectClient(ServiceClass)` | Injects a typed service proxy (auto-discovered from decorated classes) |
+| `@InjectClient()` | Injects the Restate `Ingress` client (for use outside handler context) |
+| `@InjectClient(ServiceClass)` | Injects a typed service proxy (handler context only — uses AsyncLocalStorage) |
 
 | Injectable | Description |
 |---|---|
