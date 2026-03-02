@@ -52,13 +52,19 @@ export class RestateEndpointManager {
             this.trackSessions(server);
             server.on("request", handler);
 
-            await new Promise<void>((resolve, reject) => {
-                server.once("error", reject);
-                server.listen(config.port, () => {
-                    server.removeListener("error", reject);
-                    resolve();
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    server.once("error", reject);
+                    server.listen(config.port, () => {
+                        server.removeListener("error", reject);
+                        resolve();
+                    });
                 });
-            });
+            } catch (err) {
+                server.removeAllListeners();
+                this.endpointHandler = null;
+                throw err;
+            }
 
             this.httpServer = server;
             this.ownsHttpServer = true;
