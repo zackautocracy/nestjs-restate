@@ -2,12 +2,16 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-    const app = await NestFactory.createApplicationContext(AppModule);
+    const app = await NestFactory.create(AppModule);
     app.enableShutdownHooks();
 
-    console.log("Example app started — Restate endpoint on port 9080");
-    console.log("Send requests via Restate ingress at http://localhost:8080");
-    console.log("Admin UI at http://localhost:9070");
+    await app.listen(3000);
+
+    console.log("Example app started:");
+    console.log("  REST API:         http://localhost:3000");
+    console.log("  Restate endpoint: http://localhost:9080");
+    console.log("  Restate ingress:  http://localhost:8080");
+    console.log("  Admin UI:         http://localhost:9070");
 }
 
 bootstrap().catch((error) => {

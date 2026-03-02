@@ -5,54 +5,58 @@ import { Test } from "@nestjs/testing";
 import * as restate from "@restatedev/restate-sdk";
 import * as clients from "@restatedev/restate-sdk-clients";
 import { RestateContainer } from "@restatedev/restate-sdk-testcontainers";
-import { RestateModule } from "nestjs-restate";
 import { RestateEndpointManager } from "nestjs-restate/endpoint/restate.endpoint";
 import type { StartedTestContainer } from "testcontainers";
 import { Wait } from "testcontainers";
-import { CounterService } from "./app/counter.service";
-import { GreetingWorkflow } from "./app/greeting.workflow";
-import { KvStoreObject } from "./app/kv-store.object";
-import { SignupWorkflow } from "./app/signup.workflow";
+import { FixtureModule } from "./fixture/app.module";
+import type { CartItem, ChargeResult } from "./fixture/shared/interfaces";
 
 // Service definitions for the ingress client.
 // These mirror the handlers registered by the NestJS decorators.
-const counterDef = restate.service({
-    name: "counter",
+const paymentDef = restate.service({
+    name: "payment",
     handlers: {
-        add: async (_ctx: restate.Context, _req: { a: number; b: number }): Promise<number> => 0,
-        echo: async (_ctx: restate.Context, _msg: string): Promise<string> => "",
+        charge: async (
+            _ctx: restate.Context,
+            _req: { amount: number; currency: string },
+        ): Promise<ChargeResult> => ({ transactionId: "", status: "" }),
+        refund: async (_ctx: restate.Context, _req: { transactionId: string }): Promise<void> => {},
     },
 });
 
-const kvStoreDef = restate.object({
-    name: "kv-store",
+const cartDef = restate.object({
+    name: "cart",
     handlers: {
-        set: async (
-            _ctx: restate.ObjectContext,
-            _req: { key: string; value: string },
-        ): Promise<void> => {},
-        get: restate.handlers.object.shared(
-            async (_ctx: restate.ObjectSharedContext, _key: string): Promise<string | null> => null,
+        addItem: async (_ctx: restate.ObjectContext, _item: CartItem): Promise<CartItem[]> => [],
+        clear: async (_ctx: restate.ObjectContext): Promise<void> => {},
+        getItems: restate.handlers.object.shared(
+            async (_ctx: restate.ObjectSharedContext): Promise<CartItem[]> => [],
         ),
     },
 });
 
-const greetingWfDef = restate.workflow({
-    name: "greeting-workflow",
-    handlers: {
-        run: async (_ctx: restate.WorkflowContext, _name: string): Promise<string> => "",
-    },
-});
-
-const signupWfDef = restate.workflow({
-    name: "signup",
+const orderWfDef = restate.workflow({
+    name: "order",
     handlers: {
         run: async (
             _ctx: restate.WorkflowContext,
-            _req: { email: string; name: string },
-        ): Promise<{ status: string; email: string }> => ({ status: "", email: "" }),
-        verifyEmail: restate.handlers.workflow.shared(
-            async (_ctx: restate.WorkflowSharedContext): Promise<void> => {},
+            _req: { userId: string },
+        ): Promise<{
+            orderId: string;
+            transactionId: string;
+            trackingNumber: string;
+            total: number;
+        }> => ({
+            orderId: "",
+            transactionId: "",
+            trackingNumber: "",
+            total: 0,
+        }),
+        confirmShipment: restate.handlers.workflow.shared(
+            async (
+                _ctx: restate.WorkflowSharedContext,
+                _input: { trackingNumber: string },
+            ): Promise<void> => {},
         ),
     },
 });
@@ -86,16 +90,9 @@ describe("nestjs-restate E2E", () => {
     let adminUrl: string;
 
     beforeAll(async () => {
-        // 1. Boot NestJS app FIRST — starts the HTTP/2 endpoint on a random port
-        //    Ingress URL is set to a placeholder; we'll create our own client later.
+        // 1. Boot NestJS app using the fixture module (mirrors the example app structure)
         const moduleRef = await Test.createTestingModule({
-            imports: [
-                RestateModule.forRoot({
-                    ingress: "http://placeholder:8080",
-                    endpoint: { port: 0 },
-                }),
-            ],
-            providers: [CounterService, KvStoreObject, GreetingWorkflow, SignupWorkflow],
+            imports: [FixtureModule],
         }).compile();
 
         app = moduleRef.createNestApplication();
@@ -141,7 +138,7 @@ describe("nestjs-restate E2E", () => {
             services?: { name: string }[];
         };
         expect(registration.services).toBeDefined();
-        expect(registration.services?.length).toBeGreaterThanOrEqual(4);
+        expect(registration.services?.length).toBeGreaterThanOrEqual(3);
 
         // 6. Create ingress client
         ingress = clients.connect({ url: ingressUrl });
@@ -153,61 +150,116 @@ describe("nestjs-restate E2E", () => {
         await restateContainer?.stop({ timeout: 10_000 });
     }, 120_000);
 
-    describe("Service", () => {
-        it("should invoke counter.add and return the sum", async () => {
-            const counter = ingress.serviceClient(counterDef);
-            const result = await counter.add({ a: 3, b: 7 });
-            expect(result).toBe(10);
+    describe("Service (PaymentService)", () => {
+        it("should charge and return a transaction result", async () => {
+            const payment = ingress.serviceClient(paymentDef);
+            const result = await payment.charge({ amount: 49.99, currency: "USD" });
+            expect(result.transactionId).toMatch(/^txn_/);
+            expect(result.status).toBe("charged");
         });
 
-        it("should invoke counter.echo and return the echoed message", async () => {
-            const counter = ingress.serviceClient(counterDef);
-            const result = await counter.echo("hello world");
-            expect(result).toBe("echo: hello world");
-        });
-    });
-
-    describe("VirtualObject", () => {
-        it("should set and get a value via kv-store", async () => {
-            const objectKey = `test-key-${Date.now()}`;
-            const kvStore = ingress.objectClient(kvStoreDef, objectKey);
-
-            // Set a value
-            await kvStore.set({ key: "mykey", value: "myvalue" });
-
-            // Get the value
-            const result = await kvStore.get("mykey");
-            expect(result).toBe("myvalue");
+        it("should refund without error", async () => {
+            const payment = ingress.serviceClient(paymentDef);
+            await expect(payment.refund({ transactionId: "txn_test" })).resolves.toBeUndefined();
         });
     });
 
-    describe("Workflow", () => {
-        it("should invoke greeting-workflow.run and return a greeting", async () => {
-            const workflowId = `test-wf-${Date.now()}`;
-            const wf = ingress.workflowClient(greetingWfDef, workflowId);
+    describe("VirtualObject (CartObject)", () => {
+        it("should add items and return updated cart", async () => {
+            const userId = `user-${Date.now()}`;
+            const cart = ingress.objectClient(cartDef, userId);
 
-            const result = await wf.run("Restate");
-            expect(result).toContain("Hello, Restate!");
-            expect(result).toContain("(at ");
+            const items = await cart.addItem({
+                productId: "prod-1",
+                name: "Widget",
+                price: 9.99,
+                quantity: 2,
+            });
+
+            expect(items).toHaveLength(1);
+            expect(items[0].productId).toBe("prod-1");
+            expect(items[0].quantity).toBe(2);
         });
 
-        it("should complete signup workflow after receiving verifyEmail signal", async () => {
-            const workflowId = `signup-${Date.now()}`;
-            const wf = ingress.workflowClient(signupWfDef, workflowId);
+        it("should read items via shared handler", async () => {
+            const userId = `user-read-${Date.now()}`;
+            const cart = ingress.objectClient(cartDef, userId);
 
-            // Start the workflow (it will block waiting for the email-verified signal)
-            const resultPromise = wf.run({ email: "test@example.com", name: "Test User" });
+            await cart.addItem({
+                productId: "prod-2",
+                name: "Gadget",
+                price: 19.99,
+                quantity: 1,
+            });
 
-            // Give the workflow time to start and reach the promise await
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const items = await cart.getItems();
+            expect(items).toHaveLength(1);
+            expect(items[0].name).toBe("Gadget");
+        });
 
-            // Send the verifyEmail signal
-            await wf.verifyEmail();
+        it("should merge quantities for duplicate productIds", async () => {
+            const userId = `user-merge-${Date.now()}`;
+            const cart = ingress.objectClient(cartDef, userId);
 
-            // The workflow should now complete
+            await cart.addItem({ productId: "prod-3", name: "Gizmo", price: 5.0, quantity: 1 });
+            const items = await cart.addItem({
+                productId: "prod-3",
+                name: "Gizmo",
+                price: 5.0,
+                quantity: 3,
+            });
+
+            expect(items).toHaveLength(1);
+            expect(items[0].quantity).toBe(4);
+        });
+    });
+
+    describe("Workflow (OrderWorkflow) — cross-service calls", () => {
+        it("should orchestrate payment + cart via @InjectClient and complete on shipment signal", async () => {
+            const userId = `user-order-${Date.now()}`;
+            const orderId = `order-${Date.now()}`;
+
+            // 1. Add items to the user's cart
+            const cart = ingress.objectClient(cartDef, userId);
+            await cart.addItem({ productId: "p1", name: "Book", price: 12.5, quantity: 2 });
+            await cart.addItem({ productId: "p2", name: "Pen", price: 3.0, quantity: 1 });
+
+            // 2. Start the order workflow (will block on shipment-confirmed promise)
+            const wf = ingress.workflowClient(orderWfDef, orderId);
+            const resultPromise = wf.run({ userId });
+
+            // Give the workflow time to reach the promise await
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            // 3. Confirm shipment to unblock the workflow
+            await wf.confirmShipment({ trackingNumber: "TRACK-123" });
+
+            // 4. Await the result
             const result = await resultPromise;
-            expect(result.status).toBe("completed");
-            expect(result.email).toBe("test@example.com");
+            expect(result.orderId).toBe(orderId);
+            expect(result.transactionId).toMatch(/^txn_/);
+            expect(result.trackingNumber).toBe("TRACK-123");
+            expect(result.total).toBe(28.0); // 12.5*2 + 3.0*1
+        });
+
+        it("should clear the cart after order completion", async () => {
+            const userId = `user-clear-${Date.now()}`;
+            const orderId = `order-clear-${Date.now()}`;
+
+            // Add an item
+            const cart = ingress.objectClient(cartDef, userId);
+            await cart.addItem({ productId: "p1", name: "Book", price: 10.0, quantity: 1 });
+
+            // Start and complete the order
+            const wf = ingress.workflowClient(orderWfDef, orderId);
+            const resultPromise = wf.run({ userId });
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await wf.confirmShipment({ trackingNumber: "TRACK-456" });
+            await resultPromise;
+
+            // Cart should be empty after order completion
+            const items = await cart.getItems();
+            expect(items).toHaveLength(0);
         });
     });
 });

@@ -5,8 +5,11 @@ function createHandlerDecorator(type: HandlerType): (options?: AnyHandlerOpts) =
     return (options?: AnyHandlerOpts) => {
         return (target: object, propertyKey: string | symbol) => {
             const ctor = target.constructor;
-            const existing: HandlerMetadata[] =
-                Reflect.getMetadata(HANDLER_METADATA_KEY, ctor) || [];
+            // Clone the array to prevent mutating a parent class's metadata
+            // when decorating a subclass (Reflect.getMetadata walks the prototype chain).
+            const existing: HandlerMetadata[] = [
+                ...(Reflect.getMetadata(HANDLER_METADATA_KEY, ctor) || []),
+            ];
 
             existing.push({
                 type,
@@ -25,5 +28,8 @@ export const Run = createHandlerDecorator("run");
 /** Marks a handler method on a @Service or exclusive handler on a @VirtualObject. */
 export const Handler = createHandlerDecorator("handler");
 
-/** Marks a shared handler on a @Workflow or @VirtualObject (for signals and queries). */
+/** Marks a shared (concurrent) handler on a @VirtualObject — for reads that can run in parallel. */
 export const Shared = createHandlerDecorator("shared");
+
+/** Marks a signal handler on a @Workflow — receives external signals while the workflow runs. */
+export const Signal = createHandlerDecorator("shared");

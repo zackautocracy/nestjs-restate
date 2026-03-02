@@ -6,11 +6,16 @@ import {
     Module,
     type OnModuleDestroy,
     type OnModuleInit,
+    type Provider,
 } from "@nestjs/common";
 import { DiscoveryModule } from "@nestjs/core";
 import * as clients from "@restatedev/restate-sdk-clients";
+import { RestateContext } from "./context/restate-context";
 import { RestateExplorer } from "./discovery/restate.explorer";
 import { RestateEndpointManager } from "./endpoint/restate.endpoint";
+import { createClientProxy } from "./proxy/client-proxy";
+import { getClientToken } from "./proxy/client-token";
+import { getRegisteredComponents } from "./registry/component-registry";
 import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants";
 import type { RestateModuleAsyncOptions, RestateModuleOptions } from "./restate.interfaces";
 
@@ -26,7 +31,16 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         private readonly options: RestateModuleOptions,
     ) {}
 
+    private static createAutoClientProviders(): Provider[] {
+        return [...getRegisteredComponents()].map((target) => ({
+            provide: getClientToken(target),
+            useFactory: () => createClientProxy(target),
+        }));
+    }
+
     static forRoot(options: RestateModuleOptions): DynamicModule {
+        const clientProviders = RestateModule.createAutoClientProviders();
+        const clientTokens = clientProviders.map((p) => (p as any).provide);
         return {
             module: RestateModule,
             imports: [DiscoveryModule],
@@ -38,12 +52,16 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 },
                 RestateExplorer,
                 RestateEndpointManager,
+                RestateContext,
+                ...clientProviders,
             ],
-            exports: [RESTATE_CLIENT],
+            exports: [RESTATE_CLIENT, RestateContext, ...clientTokens],
         };
     }
 
     static forRootAsync(asyncOptions: RestateModuleAsyncOptions): DynamicModule {
+        const clientProviders = RestateModule.createAutoClientProviders();
+        const clientTokens = clientProviders.map((p) => (p as any).provide);
         return {
             module: RestateModule,
             imports: [DiscoveryModule, ...(asyncOptions.imports || [])],
@@ -61,8 +79,10 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 },
                 RestateExplorer,
                 RestateEndpointManager,
+                RestateContext,
+                ...clientProviders,
             ],
-            exports: [RESTATE_CLIENT],
+            exports: [RESTATE_CLIENT, RestateContext, ...clientTokens],
         };
     }
 

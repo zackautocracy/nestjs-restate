@@ -2,6 +2,9 @@
 export type {
     Context,
     DefaultServiceOptions,
+    DurablePromise,
+    Duration,
+    InvocationHandle,
     ObjectContext,
     ObjectHandlerOpts,
     ObjectOptions,
@@ -14,7 +17,38 @@ export type {
     WorkflowOptions,
     WorkflowSharedContext,
 } from "@restatedev/restate-sdk";
-export { Handler, InjectClient, Run, Service, Shared, VirtualObject, Workflow } from "./decorators";
+// Error classes — re-exported for convenience
+export {
+    CancelledError,
+    RestateError,
+    RetryableError,
+    rpc,
+    SendOpts,
+    TerminalError,
+    TimeoutError,
+} from "@restatedev/restate-sdk";
+// Context
+export { RestateContext } from "./context/restate-context";
+export { getCurrentContext } from "./context/restate-context.store";
+export {
+    Handler,
+    InjectClient,
+    Run,
+    Service,
+    Shared,
+    Signal,
+    VirtualObject,
+    Workflow,
+} from "./decorators";
+
+// Proxy types
+export type {
+    HandlerMethods,
+    ObjectClient,
+    ServiceClient,
+    WorkflowClient,
+} from "./proxy/client-proxy";
+export { getClientToken } from "./proxy/client-token";
 
 // Constants (for advanced usage)
 export { RESTATE_CLIENT } from "./restate.constants";
@@ -33,5 +67,6 @@ export type {
     WorkflowComponentMetadata,
     WorkflowDecoratorOptions,
 } from "./restate.interfaces";
+
 // Module
 export { RestateModule } from "./restate.module";

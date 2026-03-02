@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 import { RestateModule } from "nestjs-restate";
-import { CounterService } from "./counter.service";
-import { SignupWorkflow } from "./signup.workflow";
-import { UserSessionObject } from "./user-session.object";
+import { CartModule } from "./cart/cart.module";
+import { OrderModule } from "./order/order.module";
+import { PaymentModule } from "./payment/payment.module";
 
 @Module({
     imports: [
@@ -14,7 +14,9 @@ import { UserSessionObject } from "./user-session.object";
                 deploymentUrl: "http://host.docker.internal:9080",
             },
         }),
+        PaymentModule,
+        CartModule,
+        OrderModule,
     ],
-    providers: [CounterService, UserSessionObject, SignupWorkflow],
 })
 export class AppModule {}

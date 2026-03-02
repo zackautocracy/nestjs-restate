@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Handler, Run, Shared } from "nestjs-restate";
+import { Handler, Run, Shared, Signal } from "nestjs-restate";
 import { HANDLER_METADATA_KEY } from "nestjs-restate/restate.constants";
 import type { HandlerMetadata } from "nestjs-restate/restate.interfaces";
 
@@ -78,9 +78,44 @@ describe("Method Decorators", () => {
 
     describe("@Shared", () => {
         it("should register method as shared handler", () => {
-            class TestWorkflow {
+            class TestObject {
                 @Shared()
-                async getStatus() {
+                async getCount() {
+                    /* noop */
+                }
+            }
+
+            const handlers: HandlerMetadata[] = Reflect.getMetadata(
+                HANDLER_METADATA_KEY,
+                TestObject,
+            );
+            expect(handlers).toContainEqual({
+                type: "shared",
+                methodName: "getCount",
+            });
+        });
+
+        it("should store handler-level options when provided", () => {
+            class TestObject {
+                @Shared({ retryPolicy: { maxAttempts: 2 } })
+                async getCount() {
+                    /* noop */
+                }
+            }
+
+            const handlers: HandlerMetadata[] = Reflect.getMetadata(
+                HANDLER_METADATA_KEY,
+                TestObject,
+            );
+            expect(handlers[0].options?.retryPolicy?.maxAttempts).toBe(2);
+        });
+    });
+
+    describe("@Signal", () => {
+        it("should register method as shared handler (workflow signal)", () => {
+            class TestWorkflow {
+                @Signal()
+                async confirmPayment() {
                     /* noop */
                 }
             }
@@ -91,14 +126,14 @@ describe("Method Decorators", () => {
             );
             expect(handlers).toContainEqual({
                 type: "shared",
-                methodName: "getStatus",
+                methodName: "confirmPayment",
             });
         });
 
         it("should store handler-level options when provided", () => {
             class TestWorkflow {
-                @Shared({ retryPolicy: { maxAttempts: 2 } })
-                async getStatus() {
+                @Signal({ retryPolicy: { maxAttempts: 2 } })
+                async confirmPayment() {
                     /* noop */
                 }
             }
@@ -118,12 +153,12 @@ describe("Method Decorators", () => {
                 /* noop */
             }
 
-            @Shared()
+            @Signal()
             async acknowledge() {
                 /* noop */
             }
 
-            @Shared()
+            @Signal()
             async getStatus() {
                 /* noop */
             }

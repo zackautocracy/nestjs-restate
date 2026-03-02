@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { registerComponent } from "../registry/component-registry";
 import { VIRTUAL_OBJECT_METADATA_KEY } from "../restate.constants";
 import type {
     VirtualObjectComponentMetadata,
@@ -23,5 +24,6 @@ export function VirtualObject(nameOrOptions: VirtualObjectDecoratorOptions): Cla
     return (target) => {
         Injectable()(target as unknown as new (...args: any[]) => any);
         Reflect.defineMetadata(VIRTUAL_OBJECT_METADATA_KEY, meta, target);
+        registerComponent(target as unknown as new (...args: any[]) => any);
     };
 }
