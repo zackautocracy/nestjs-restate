@@ -58,8 +58,7 @@
         "@nestjs/common": ">=10.0.0",
         "@nestjs/core": ">=10.0.0",
         "@restatedev/restate-sdk": ">=1.6.0",
-        "@restatedev/restate-sdk-clients": ">=1.6.0",
-        "reflect-metadata": ">=0.1.13"
+        "@restatedev/restate-sdk-clients": ">=1.6.0"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
