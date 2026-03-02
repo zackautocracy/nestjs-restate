@@ -99,7 +99,7 @@ yarn docker:down
 
 ## Architecture
 
-```
+```text
 lib/
 ├── decorators/          # @Service, @VirtualObject, @Workflow, @Handler, @Run, @Shared, @InjectClient
 ├── discovery/           # RestateExplorer — discovers decorated classes via NestJS DiscoveryService

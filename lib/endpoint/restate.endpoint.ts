@@ -40,6 +40,7 @@ export class RestateEndpointManager {
 
         if ("port" in config) {
             const server = http2.createServer();
+            this.trackSessions(server);
             server.on("request", handler);
 
             await new Promise<void>((resolve, reject) => {
@@ -51,7 +52,6 @@ export class RestateEndpointManager {
             });
 
             this.httpServer = server;
-            this.trackSessions(server);
             const addr = server.address();
             this.listeningPort =
                 typeof addr === "object" && addr !== null ? addr.port : config.port;

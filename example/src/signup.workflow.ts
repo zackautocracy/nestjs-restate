@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type * as restate from "@restatedev/restate-sdk";
 import { Run, Shared, Workflow } from "nestjs-restate";
 
@@ -14,9 +15,7 @@ export class SignupWorkflow {
         request: SignupRequest,
     ): Promise<{ status: string; email: string }> {
         // Step 1: Generate a verification token
-        const token = await ctx.run("generate-token", () =>
-            Math.random().toString(36).substring(2, 10),
-        );
+        const token = await ctx.run("generate-token", () => randomUUID());
         ctx.console.log(`Verification token for ${request.email}: ${token}`);
 
         // Step 2: Wait for email verification signal

@@ -10,4 +10,7 @@ async function bootstrap() {
     console.log("Admin UI at http://localhost:9070");
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+    console.error("Failed to start example app:", error);
+    process.exit(1);
+});
