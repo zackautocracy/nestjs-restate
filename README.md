@@ -17,7 +17,7 @@
 
 Define Restate workflows, services, and virtual objects as regular NestJS injectable classes. Full dependency injection, auto-discovery, and lifecycle management — no manual wiring required.
 
-- **Decorator-driven** — `@Workflow()`, `@Service()`, `@VirtualObject()`, `@Handler()`, `@Run()`, `@Shared()`
+- **Decorator-driven** — `@Workflow()`, `@Service()`, `@VirtualObject()`, `@Handler()`, `@Run()`, `@Signal()`, `@Shared()`
 - **Full DI support** — constructor injection works like any NestJS provider
 - **Injectable context** — `RestateContext` gives handler methods access to the Restate SDK context via DI
 - **Typed service proxies** — call other Restate services with full type safety via `@InjectClient(ServiceClass)`
@@ -92,7 +92,7 @@ Auto-discovery handles the rest — no manual registration with the Restate endp
 
 ### 4. Call it
 
-**Typed proxy** (recommended for inter-service calls) — any `@Service`, `@VirtualObject`, or `@Workflow` class is auto-discovered and available for injection. Typed proxies use `AsyncLocalStorage` and **only work inside Restate handler methods** (i.e., methods decorated with `@Handler()`, `@Run()`, or `@Shared()`):
+**Typed proxy** (recommended for inter-service calls) — any `@Service`, `@VirtualObject`, or `@Workflow` class is auto-discovered and available for injection. Typed proxies use `AsyncLocalStorage` and **only work inside Restate handler methods** (i.e., methods decorated with `@Handler()`, `@Run()`, `@Signal()`, or `@Shared()`):
 
 ```typescript
 import { Service, Handler, InjectClient, type ServiceClient } from 'nestjs-restate';
@@ -139,7 +139,8 @@ All class decorators implicitly apply `@Injectable()`.
 | `@VirtualObject(name)` | [Restate Virtual Object](https://docs.restate.dev/develop/ts/virtual-objects/) — keyed stateful handlers |
 | `@Workflow(name)` | [Restate Workflow](https://docs.restate.dev/develop/ts/workflows/) — long-running durable process |
 | `@Handler()` | Handler method on `@Service`, or exclusive handler on `@VirtualObject` |
-| `@Shared()` | Concurrent handler on `@Workflow` or `@VirtualObject` |
+| `@Shared()` | Concurrent handler on `@VirtualObject` (for reads that can run in parallel) |
+| `@Signal()` | Signal handler on `@Workflow` (receives external signals while the workflow runs) |
 | `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
 | `@InjectClient()` | Injects the Restate `Ingress` client (for use outside handler context) |
 | `@InjectClient(ServiceClass)` | Injects a typed service proxy (handler context only — uses AsyncLocalStorage) |
@@ -148,7 +149,7 @@ All class decorators implicitly apply `@Injectable()`.
 |---|---|
 | `RestateContext` | Injectable wrapper around the Restate SDK context — automatically scoped to the current request via `AsyncLocalStorage` |
 
-Component and handler decorators (`@Service`, `@VirtualObject`, `@Workflow`, `@Handler`, `@Run`, `@Shared`) also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
+Component and handler decorators (`@Service`, `@VirtualObject`, `@Workflow`, `@Handler`, `@Run`, `@Signal`, `@Shared`) also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
 
 ## Services
 
@@ -240,10 +241,10 @@ export class DashboardService {
 
 ## Workflows
 
-Workflows are durable, long-running processes with a single `@Run()` entry point. They can suspend on durable promises and receive external signals through `@Shared()` handlers.
+Workflows are durable, long-running processes with a single `@Run()` entry point. They can suspend on durable promises and receive external signals through `@Signal()` handlers.
 
 ```typescript
-import { Workflow, Run, Shared, RestateContext } from 'nestjs-restate';
+import { Workflow, Run, Signal, RestateContext } from 'nestjs-restate';
 
 @Workflow('payment')
 export class PaymentWorkflow {
@@ -268,7 +269,7 @@ export class PaymentWorkflow {
         return { success: true, intentId };
     }
 
-    @Shared()
+    @Signal()
     async confirmPayment(input: { confirmationId: string }) {
         this.ctx.promise<string>('payment-confirmed').resolve(input.confirmationId);
     }
@@ -277,8 +278,8 @@ export class PaymentWorkflow {
 
 **Key rules:**
 - Exactly **one** `@Run()` per workflow
-- `@Shared()` methods can be called concurrently while the workflow is running
-- Use `this.ctx.promise()` for durable signals between run and shared handlers
+- `@Signal()` methods can be called concurrently while the workflow is running
+- Use `this.ctx.promise()` for durable signals between run and signal handlers
 
 Call a workflow from another Restate handler using a typed proxy:
 

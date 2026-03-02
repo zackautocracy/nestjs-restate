@@ -11,7 +11,7 @@ export function getCurrentContext<T = any>(): T {
     if (!ctx) {
         throw new Error(
             "Restate context not available. " +
-                "This can only be used within @Handler/@Run/@Shared methods. " +
+                "This can only be used within @Handler/@Run/@Signal/@Shared methods. " +
                 "To call Restate services from outside handlers (e.g., REST controllers), " +
                 "use @InjectClient() (no args) for the Restate Ingress client instead.",
         );

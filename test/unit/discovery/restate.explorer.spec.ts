@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Handler, Run, Service, Shared, VirtualObject, Workflow } from "nestjs-restate";
+import { Handler, Run, Service, Shared, Signal, VirtualObject, Workflow } from "nestjs-restate";
 import { RestateExplorer } from "nestjs-restate/discovery/restate.explorer";
 
 function createMockDiscoveryService(instances: any[]) {
@@ -22,7 +22,7 @@ describe("RestateExplorer", () => {
                     return "done";
                 }
 
-                @Shared()
+                @Signal()
                 async signal() {
                     /* noop */
                 }
@@ -40,7 +40,7 @@ describe("RestateExplorer", () => {
         it("should throw if workflow has no @Run handler", () => {
             @Workflow("bad-workflow")
             class BadWorkflow {
-                @Shared()
+                @Signal()
                 async signal() {
                     /* noop */
                 }
@@ -278,7 +278,7 @@ describe("RestateExplorer", () => {
                     return "done";
                 }
 
-                @Shared()
+                @Signal()
                 async getStatus() {
                     return "active";
                 }

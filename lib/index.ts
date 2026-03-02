@@ -21,7 +21,16 @@ export { rpc, SendOpts } from "@restatedev/restate-sdk";
 // Context
 export { RestateContext } from "./context/restate-context";
 export { getCurrentContext } from "./context/restate-context.store";
-export { Handler, InjectClient, Run, Service, Shared, VirtualObject, Workflow } from "./decorators";
+export {
+    Handler,
+    InjectClient,
+    Run,
+    Service,
+    Shared,
+    Signal,
+    VirtualObject,
+    Workflow,
+} from "./decorators";
 
 // Proxy types
 export type {

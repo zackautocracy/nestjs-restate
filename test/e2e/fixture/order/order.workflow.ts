@@ -4,7 +4,7 @@ import {
     RestateContext,
     Run,
     type ServiceClient,
-    Shared,
+    Signal,
     Workflow,
 } from "nestjs-restate";
 import { CartObject } from "../cart/cart.object";
@@ -49,7 +49,7 @@ export class OrderWorkflow {
         };
     }
 
-    @Shared()
+    @Signal()
     async confirmShipment(input: { trackingNumber: string }): Promise<void> {
         await this.ctx.promise<string>("shipment-confirmed").resolve(input.trackingNumber);
     }

@@ -103,7 +103,7 @@ yarn docker:down
 ```text
 lib/
 ├── context/             # RestateContext injectable + AsyncLocalStorage context store
-├── decorators/          # @Service, @VirtualObject, @Workflow, @Handler, @Run, @Shared, @InjectClient
+├── decorators/          # @Service, @VirtualObject, @Workflow, @Handler, @Run, @Signal, @Shared, @InjectClient
 ├── discovery/           # RestateExplorer — discovers decorated classes via NestJS DiscoveryService
 ├── endpoint/            # RestateEndpointManager — manages HTTP/2 server lifecycle
 ├── proxy/               # Typed client proxy factory + DI token management
