@@ -1,15 +1,16 @@
-import type * as restate from "@restatedev/restate-sdk";
-import { Handler, Shared, VirtualObject } from "nestjs-restate";
+import { Handler, RestateContext, Shared, VirtualObject } from "nestjs-restate";
 
 @VirtualObject("kv-store")
 export class KvStoreObject {
+    constructor(private readonly ctx: RestateContext) {}
+
     @Handler()
-    async set(ctx: restate.ObjectContext, request: { key: string; value: string }): Promise<void> {
-        ctx.set(request.key, request.value);
+    async set(request: { key: string; value: string }): Promise<void> {
+        this.ctx.set(request.key, request.value);
     }
 
     @Shared()
-    async get(ctx: restate.ObjectSharedContext, key: string): Promise<string | null> {
-        return (await ctx.get<string>(key)) ?? null;
+    async get(key: string): Promise<string | null> {
+        return (await this.ctx.get<string>(key)) ?? null;
     }
 }
