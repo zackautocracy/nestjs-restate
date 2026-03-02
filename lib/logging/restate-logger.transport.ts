@@ -26,10 +26,19 @@ const LEVEL_COLORS: Record<string, (text: string) => string> = {
     error: clc.red,
 };
 
+function safeStringify(value: any): string {
+    if (typeof value === "string") return value;
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+}
+
 function formatMessage(message: any, optionalParams: any[]): string {
-    const parts = [typeof message === "string" ? message : JSON.stringify(message)];
+    const parts = [safeStringify(message)];
     for (const param of optionalParams) {
-        parts.push(typeof param === "string" ? param : JSON.stringify(param));
+        parts.push(safeStringify(param));
     }
     return parts.join(" ");
 }
