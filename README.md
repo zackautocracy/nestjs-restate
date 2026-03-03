@@ -81,6 +81,8 @@ export class AppModule {}
 
 ### 2. Define a service
 
+> **Note:** `stripe`, `mailer`, and `db` in the examples below are placeholders for your own providers or SDK clients — they are not provided by this package.
+
 ```typescript
 import { Service, Handler, RestateContext } from 'nestjs-restate';
 
