@@ -75,7 +75,7 @@ function resolveLogLevel(level: string, message: unknown, optionalParams: unknow
     ) {
         return "debug";
     }
-    const error = optionalParams.find((p): p is Error => p instanceof Error);
+    const error = [message, ...optionalParams].find((p): p is Error => p instanceof Error);
     if (!error) return level;
     if (level === "warn") {
         return error instanceof TerminalError ? "error" : "debug";
