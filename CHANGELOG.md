@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.4.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.3.0...nestjs-restate-v2.4.0) (2026-03-03)
+
+
+### Features
+
+* **logging:** improve error formatting with opt-in stack traces ([74e4300](https://github.com/zackautocracy/nestjs-restate/commit/74e4300cdc5748580c12562ff127ae260413482c))
+* smart log level mapping for Restate error types ([f99253f](https://github.com/zackautocracy/nestjs-restate/commit/f99253f6fe317485dab40a4ba538262f1e98f7b5))
+
+
+### Bug Fixes
+
+* address review feedback - resolveLogLevel checks message, freeze timestamp test, README fixes ([eb44f22](https://github.com/zackautocracy/nestjs-restate/commit/eb44f22cd48b39d7539d24e8317ee358a130342b))
+* align timestamp format with NestJS ConsoleLogger ([a88f678](https://github.com/zackautocracy/nestjs-restate/commit/a88f67821da2bb8e7ea465adf9fa2aad1b6cf946))
+* **logging:** align transport output with NestJS ConsoleLogger format ([ac3babd](https://github.com/zackautocracy/nestjs-restate/commit/ac3babd9dc55774035e1ca180e62b4cd8816c642))
+* serialize Error objects with message and stack in logger transport ([b31812b](https://github.com/zackautocracy/nestjs-restate/commit/b31812b49735c1ca9e5398cb6dff07e2fa972f78))
+
+
+### Code Refactoring
+
+* address code review - SDK message comment, fix fragile test, add negative test ([336481d](https://github.com/zackautocracy/nestjs-restate/commit/336481d79b10327f8a4c18dc701c68bde777e20a))
+
+
+### Documentation
+
+* add Error Formatting section for log level adjustments and error serialization ([de38327](https://github.com/zackautocracy/nestjs-restate/commit/de383271ecfce15e587950d6079b6951a297da58))
+
+
+### Tests
+
+* add error classification label tests ([ace0685](https://github.com/zackautocracy/nestjs-restate/commit/ace0685d077a44ed190d7d0e735d801e3b121ff8))
+* cover remaining branches in logger transport (100% coverage) ([b48ea45](https://github.com/zackautocracy/nestjs-restate/commit/b48ea4579e4086bb7645b21542a7c0735cc9d4e2))
+
 ## [2.3.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.2.0...nestjs-restate-v2.3.0) (2026-03-03)
 
 
