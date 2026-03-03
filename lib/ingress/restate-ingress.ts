@@ -1,11 +1,12 @@
 import { Logger } from "@nestjs/common";
 import type {
+    Opts,
     Output,
     Ingress as SdkIngress,
     Send,
+    SendOpts,
     WorkflowSubmission,
 } from "@restatedev/restate-sdk-clients";
-import { Opts, SendOpts } from "@restatedev/restate-sdk-clients";
 
 import { getContextIfAvailable } from "../context/restate-context.store";
 import { getComponentMeta, isRestateComponent } from "../registry/component-metadata";
@@ -122,7 +123,6 @@ type InterceptedMethods =
  * Use `serviceDefinitionOf()` / `objectDefinitionOf()` / `workflowDefinitionOf()`
  * if you need to pass an SDK definition to a method that expects one.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Ingress extends Omit<SdkIngress, InterceptedMethods> {
     /** Create a typed client for a decorated `@Service()` class. */
     serviceClient<T>(target: Constructor<T>): IngressServiceClient<T>;

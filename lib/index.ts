@@ -84,8 +84,8 @@ export type {
     WorkflowClient,
 } from "./proxy/client-proxy";
 export { getClientToken } from "./proxy/client-token";
-export type { ComponentMeta } from "./registry/component-metadata";
 // Component metadata (shared utility)
+export type { ComponentMeta } from "./registry/component-metadata";
 export { getComponentMeta, isRestateComponent } from "./registry/component-metadata";
 
 // Constants (for advanced usage)

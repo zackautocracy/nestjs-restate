@@ -15,9 +15,9 @@ export interface ComponentMeta {
 export function isRestateComponent(value: unknown): value is new (...args: any[]) => any {
     if (typeof value !== "function") return false;
     return (
-        !!Reflect.getMetadata(SERVICE_METADATA_KEY, value) ||
-        !!Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, value) ||
-        !!Reflect.getMetadata(WORKFLOW_METADATA_KEY, value)
+        Reflect.hasMetadata(SERVICE_METADATA_KEY, value) ||
+        Reflect.hasMetadata(VIRTUAL_OBJECT_METADATA_KEY, value) ||
+        Reflect.hasMetadata(WORKFLOW_METADATA_KEY, value)
     );
 }
 
