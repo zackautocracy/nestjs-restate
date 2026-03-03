@@ -270,4 +270,82 @@ describe("createRestateLoggerTransport", () => {
         expect(output).toContain("[RestateError]");
         expect(output).toContain("internal");
     });
+
+    it("should escalate TerminalError from WARN to ERROR (stderr)", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Error when processing ctx.run 'charge'.", new TerminalError("bad card"));
+
+        expect(stderrSpy).toHaveBeenCalledTimes(1);
+        expect(stdoutSpy).not.toHaveBeenCalled();
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("ERROR");
+        expect(output).not.toContain("WARN");
+    });
+
+    it("should downgrade retryable error from WARN to DEBUG (stdout)", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Error when processing ctx.run 'upload'.", new RetryableError("timeout"));
+
+        expect(stdoutSpy).toHaveBeenCalledTimes(1);
+        expect(stderrSpy).not.toHaveBeenCalled();
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("DEBUG");
+        expect(output).not.toContain("WARN");
+    });
+
+    it("should downgrade plain Error at WARN to DEBUG", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Error when processing", new Error("some error"));
+
+        expect(stdoutSpy).toHaveBeenCalledTimes(1);
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("DEBUG");
+    });
+
+    it("should downgrade 'Invocation suspended' from INFO to DEBUG", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Invocation suspended");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("DEBUG");
+        expect(output).not.toContain("LOG");
+    });
+
+    it("should pass through non-error WARN logs unchanged", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Low stock warning");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("WARN");
+    });
 });

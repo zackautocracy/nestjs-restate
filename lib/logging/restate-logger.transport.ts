@@ -66,6 +66,22 @@ function formatMessage(message: any, optionalParams: any[]): string {
     return parts.join(" ");
 }
 
+function resolveLogLevel(level: string, message: unknown, optionalParams: unknown[]): string {
+    if (
+        level === "info" &&
+        typeof message === "string" &&
+        message.includes("Invocation suspended")
+    ) {
+        return "debug";
+    }
+    const error = optionalParams.find((p): p is Error => p instanceof Error);
+    if (!error) return level;
+    if (level === "warn") {
+        return error instanceof TerminalError ? "error" : "debug";
+    }
+    return level;
+}
+
 export function createRestateLoggerTransport(): LoggerTransport {
     return (params: LogMetadata, message?: any, ...optionalParams: any[]) => {
         if (params.replaying) return;
@@ -73,8 +89,9 @@ export function createRestateLoggerTransport(): LoggerTransport {
         const timestamp = dateTimeFormatter.format(Date.now());
         const pid = process.pid;
         const context = params.context?.invocationTarget ?? "Restate";
-        const levelLabel = LEVEL_LABELS[params.level] ?? "LOG";
-        const colorFn = LEVEL_COLORS[params.level] ?? clc.green;
+        const effectiveLevel = resolveLogLevel(params.level, message, optionalParams);
+        const levelLabel = LEVEL_LABELS[effectiveLevel] ?? "LOG";
+        const colorFn = LEVEL_COLORS[effectiveLevel] ?? clc.green;
         const formattedMessage = formatMessage(message, optionalParams);
 
         // Write directly to stdout/stderr — NEVER use NestJS Logger here
@@ -88,7 +105,7 @@ export function createRestateLoggerTransport(): LoggerTransport {
             colorFn(formattedMessage) +
             "\n";
 
-        if (params.level === "error") {
+        if (effectiveLevel === "error") {
             process.stderr.write(output);
         } else {
             process.stdout.write(output);
