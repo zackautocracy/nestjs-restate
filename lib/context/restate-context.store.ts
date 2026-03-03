@@ -13,7 +13,8 @@ export function getCurrentContext<T = any>(): T {
             "Restate context not available. " +
                 "This can only be used within @Handler/@Run/@Signal/@Shared methods. " +
                 "To call Restate services from outside handlers (e.g., REST controllers), " +
-                "use @InjectClient() (no args) for the Restate Ingress client instead.",
+                "use @InjectClient() to get the Ingress client and pass the component class directly: " +
+                "ingress.serviceClient(MyService).myMethod(...)",
         );
     }
     return ctx;

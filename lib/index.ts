@@ -56,10 +56,26 @@ export {
     VirtualObject,
     Workflow,
 } from "./decorators";
+// Definition utilities
+export {
+    objectDefinitionOf,
+    serviceDefinitionOf,
+    workflowDefinitionOf,
+} from "./ingress/definition-of";
+// Ingress (enhanced)
+export type {
+    Constructor,
+    Ingress,
+    IngressObjectClient,
+    IngressSendObjectClient,
+    IngressSendServiceClient,
+    IngressServiceClient,
+    IngressWorkflowClient,
+} from "./ingress/restate-ingress";
+export { createRestateIngress } from "./ingress/restate-ingress";
 // Logging
 export { RestateLoggerService } from "./logging/restate-logger.service";
 export { createRestateLoggerTransport } from "./logging/restate-logger.transport";
-
 // Proxy types
 export type {
     HandlerMethods,
@@ -68,6 +84,9 @@ export type {
     WorkflowClient,
 } from "./proxy/client-proxy";
 export { getClientToken } from "./proxy/client-token";
+export type { ComponentMeta } from "./registry/component-metadata";
+// Component metadata (shared utility)
+export { getComponentMeta, isRestateComponent } from "./registry/component-metadata";
 
 // Constants (for advanced usage)
 export { RESTATE_CLIENT } from "./restate.constants";

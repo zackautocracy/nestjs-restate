@@ -13,6 +13,7 @@ import * as clients from "@restatedev/restate-sdk-clients";
 import { RestateContext } from "./context/restate-context";
 import { RestateExplorer } from "./discovery/restate.explorer";
 import { RestateEndpointManager } from "./endpoint/restate.endpoint";
+import { createRestateIngress } from "./ingress/restate-ingress";
 import { RestateLoggerService } from "./logging/restate-logger.service";
 import { createClientProxy } from "./proxy/client-proxy";
 import { getClientToken } from "./proxy/client-token";
@@ -49,7 +50,8 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 { provide: RESTATE_OPTIONS, useValue: options },
                 {
                     provide: RESTATE_CLIENT,
-                    useFactory: () => clients.connect({ url: options.ingress }),
+                    useFactory: () =>
+                        createRestateIngress(clients.connect({ url: options.ingress })),
                 },
                 RestateExplorer,
                 RestateEndpointManager,
@@ -75,7 +77,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 {
                     provide: RESTATE_CLIENT,
                     useFactory: (opts: RestateModuleOptions) =>
-                        clients.connect({ url: opts.ingress }),
+                        createRestateIngress(clients.connect({ url: opts.ingress })),
                     inject: [RESTATE_OPTIONS],
                 },
                 RestateExplorer,
