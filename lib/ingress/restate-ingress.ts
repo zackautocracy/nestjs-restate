@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import type {
     Output,
     Ingress as SdkIngress,
@@ -5,6 +6,9 @@ import type {
     WorkflowSubmission,
 } from "@restatedev/restate-sdk-clients";
 import { Opts, SendOpts } from "@restatedev/restate-sdk-clients";
+
+import { getContextIfAvailable } from "../context/restate-context.store";
+import { getComponentMeta, isRestateComponent } from "../registry/component-metadata";
 
 // ── Helper Types ──
 
@@ -118,3 +122,53 @@ export type Ingress = SdkIngress & {
     /** Create a fire-and-forget client for a decorated `@VirtualObject()` class, keyed by `key`. */
     objectSendClient<T>(target: Constructor<T>, key: string): IngressSendObjectClient<T>;
 };
+
+// ── Runtime Implementation ──
+
+const INTERCEPTED_METHODS = new Set([
+    "serviceClient",
+    "objectClient",
+    "workflowClient",
+    "serviceSendClient",
+    "objectSendClient",
+]);
+
+const warnedTargets = new Set<string>();
+
+function warnIfInsideHandler(targetName: string): void {
+    if (getContextIfAvailable() && !warnedTargets.has(targetName)) {
+        warnedTargets.add(targetName);
+        Logger.warn(
+            `Ingress client used inside a Restate handler for '${targetName}'. ` +
+                `This makes a regular HTTP call and bypasses durable execution. ` +
+                `Use @InjectClient(${targetName}) for durable RPC instead.`,
+            "RestateIngress",
+        );
+    }
+}
+
+/** Wrap a raw SDK Ingress client with class-based overloads. */
+export function createRestateIngress(sdkIngress: SdkIngress): Ingress {
+    return new Proxy(sdkIngress as unknown as Ingress, {
+        get(target: any, prop: string | symbol) {
+            if (typeof prop === "symbol" || !INTERCEPTED_METHODS.has(prop)) {
+                const val = target[prop];
+                return typeof val === "function" ? val.bind(target) : val;
+            }
+            return (...args: any[]) => {
+                const firstArg = args[0];
+                if (isRestateComponent(firstArg)) {
+                    const { name } = getComponentMeta(firstArg);
+                    warnIfInsideHandler(name);
+                    args[0] = { name };
+                }
+                return target[prop](...args);
+            };
+        },
+    });
+}
+
+/** @internal — for test isolation only */
+export function clearIngressWarnings(): void {
+    warnedTargets.clear();
+}
