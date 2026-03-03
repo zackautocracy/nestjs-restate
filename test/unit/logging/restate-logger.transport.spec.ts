@@ -233,26 +233,31 @@ describe("createRestateLoggerTransport", () => {
     });
 
     it("should format timestamp using Intl.DateTimeFormat matching NestJS", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "info" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-01-15T10:30:00.000Z"));
+        try {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "test");
+            transport(params, "test");
 
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        // NestJS uses: new Intl.DateTimeFormat(undefined, { year, month, day, hour, minute, second })
-        const expectedTimestamp = new Intl.DateTimeFormat(undefined, {
-            year: "numeric",
-            hour: "numeric",
-            minute: "numeric",
-            second: "numeric",
-            day: "2-digit",
-            month: "2-digit",
-        }).format(Date.now());
-        expect(output).toContain(expectedTimestamp);
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            const expectedTimestamp = new Intl.DateTimeFormat(undefined, {
+                year: "numeric",
+                hour: "numeric",
+                minute: "numeric",
+                second: "numeric",
+                day: "2-digit",
+                month: "2-digit",
+            }).format(new Date());
+            expect(output).toContain(expectedTimestamp);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it("should label RestateError with [RestateError]", () => {
@@ -346,6 +351,22 @@ describe("createRestateLoggerTransport", () => {
 
         const output = stdoutSpy.mock.calls[0][0] as string;
         expect(output).toContain("WARN");
+    });
+
+    it("should escalate TerminalError passed as message from WARN to ERROR", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, new TerminalError("bad card"));
+
+        expect(stderrSpy).toHaveBeenCalledTimes(1);
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("ERROR");
+        expect(output).toContain("[TerminalError]");
     });
 
     it("should NOT downgrade retryable error at ERROR level", () => {
