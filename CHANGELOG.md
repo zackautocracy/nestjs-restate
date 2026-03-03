@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.3.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.2.0...nestjs-restate-v2.3.0) (2026-03-03)
+
+
+### Features
+
+* add definitionOf utilities for SDK-compatible definitions ([82fdce7](https://github.com/zackautocracy/nestjs-restate/commit/82fdce7fd501b4e9963a262a29300566e4b59bd6))
+* add enhanced Ingress proxy type definitions ([6bb4328](https://github.com/zackautocracy/nestjs-restate/commit/6bb4328750dcc85f3bf08946d061763f9c646f70))
+* implement createRestateIngress proxy runtime ([9af7a9e](https://github.com/zackautocracy/nestjs-restate/commit/9af7a9e9242ed1fd683ad68f5cb3a957187f4fe0))
+* wire enhanced Ingress into module and update exports ([2b1ced3](https://github.com/zackautocracy/nestjs-restate/commit/2b1ced3566686b652eb2043a0604dd7af0a54586))
+
+
+### Bug Fixes
+
+* address copilot review feedback ([0d4f87c](https://github.com/zackautocracy/nestjs-restate/commit/0d4f87c21b34069b447a5026e458de4867eb3502))
+* guard against undecorated classes in Ingress proxy ([4094d41](https://github.com/zackautocracy/nestjs-restate/commit/4094d41616741f55876984bce7b821685ea05595))
+* validate component type matches Ingress method before forwarding ([521ca93](https://github.com/zackautocracy/nestjs-restate/commit/521ca9359d045406f83e419ba09afa0fbff3f56a))
+
+
+### Code Refactoring
+
+* extract getComponentMeta to shared utility ([003dfbf](https://github.com/zackautocracy/nestjs-restate/commit/003dfbf3aa52a7b35d622b954ccd1f17733ef99f))
+* fresh-eyes review fixes ([a1fc076](https://github.com/zackautocracy/nestjs-restate/commit/a1fc076a0770523ae63915b0deb0cafdf8f1d018))
+* remove manual SDK definition stubs from example ([7158d1a](https://github.com/zackautocracy/nestjs-restate/commit/7158d1a7da2750da53ab472c534d11c870dc023d))
+
+
+### Documentation
+
+* clarify placeholder integrations in README examples ([4d92ab4](https://github.com/zackautocracy/nestjs-restate/commit/4d92ab4814dda7f99821adbb02e6f9349635141c))
+* rewrite README for newcomer-friendly progressive disclosure ([0c63126](https://github.com/zackautocracy/nestjs-restate/commit/0c631269f6a267766b18fbdbcaaa838fa4e7793f))
+
 ## [2.2.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.1.0...nestjs-restate-v2.2.0) (2026-03-03)
 
 

@@ -1,6 +1,6 @@
 {
     "name": "nestjs-restate",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "description": "First-class NestJS integration for Restate durable execution engine",
     "license": "MIT",
     "author": "Zakaria O.I.A <codeautocracy@gmail.com>",
