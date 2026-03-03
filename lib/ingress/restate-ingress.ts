@@ -1,0 +1,120 @@
+import type {
+    Output,
+    Ingress as SdkIngress,
+    Send,
+    WorkflowSubmission,
+} from "@restatedev/restate-sdk-clients";
+import { Opts, SendOpts } from "@restatedev/restate-sdk-clients";
+
+// ── Helper Types ──
+
+/** Class constructor type */
+export type Constructor<T = any> = new (...args: any[]) => T;
+
+/** NestJS lifecycle methods to exclude from handler maps */
+type NestLifecycleMethods =
+    | "onModuleInit"
+    | "onModuleDestroy"
+    | "onApplicationBootstrap"
+    | "onApplicationShutdown"
+    | "beforeApplicationShutdown";
+
+/**
+ * Filter to only public async methods, excluding NestJS lifecycle hooks.
+ * Redefined here (also exists in client-proxy.ts) to avoid circular dependencies.
+ */
+export type HandlerMethods<T> = {
+    [K in keyof T as K extends NestLifecycleMethods
+        ? never
+        : T[K] extends (...args: any[]) => Promise<any>
+          ? K
+          : never]: T[K];
+};
+
+/** Infer the first argument type from a parameter list */
+type InferArgType<P extends unknown[]> = P extends [infer A, ...unknown[]] ? A : unknown;
+
+// ── Ingress Client Types for Class-Based Usage ──
+
+/**
+ * Typed service client derived from NestJS class methods.
+ * Maps each handler method to a callable signature with optional {@link Opts} appended.
+ *
+ * Unlike the SDK's {@link import("@restatedev/restate-sdk-clients").IngressClient | IngressClient},
+ * this does NOT strip the first argument because NestJS class methods don't have
+ * a `ctx` first parameter — the context is injected by the framework.
+ */
+export type IngressServiceClient<T> = {
+    [K in keyof HandlerMethods<T>]: T[K] extends (...args: infer P) => Promise<infer O>
+        ? (...args: [...P, opts?: Opts<InferArgType<P>, O>]) => Promise<O>
+        : never;
+};
+
+/** Same shape as {@link IngressServiceClient} — object methods have the same callable signature. */
+export type IngressObjectClient<T> = IngressServiceClient<T>;
+
+/**
+ * Workflow client: handler methods + `workflowSubmit` / `workflowAttach` / `workflowOutput`,
+ * minus `run` (which is submitted via `workflowSubmit`).
+ */
+export type IngressWorkflowClient<T> = Omit<
+    IngressServiceClient<T> & {
+        /** Submit the workflow's `run` handler for asynchronous execution. */
+        workflowSubmit: T extends { run: (...args: infer P) => Promise<infer O> }
+            ? (...args: [...P, opts?: SendOpts<InferArgType<P>>]) => Promise<WorkflowSubmission<O>>
+            : never;
+        /** Attach to the workflow and wait for completion. */
+        workflowAttach: T extends { run: (...args: any[]) => Promise<infer O> }
+            ? (opts?: Opts<void, O>) => Promise<O>
+            : never;
+        /** Check if the workflow output is ready without waiting for completion. */
+        workflowOutput: T extends { run: (...args: any[]) => Promise<infer O> }
+            ? (opts?: Opts<void, O>) => Promise<Output<O>>
+            : never;
+    },
+    "run"
+>;
+
+/** Fire-and-forget service client — returns {@link Send} instead of the handler result. */
+export type IngressSendServiceClient<T> = {
+    [K in keyof HandlerMethods<T>]: T[K] extends (...args: infer P) => Promise<infer O>
+        ? (...args: [...P, opts?: SendOpts<InferArgType<P>>]) => Promise<Send<O>>
+        : never;
+};
+
+/** Same shape as {@link IngressSendServiceClient} for virtual objects. */
+export type IngressSendObjectClient<T> = IngressSendServiceClient<T>;
+
+// ── Enhanced Ingress Interface ──
+
+/**
+ * Enhanced Ingress interface that extends the SDK's Ingress with additional
+ * overloads accepting NestJS decorated class constructors.
+ *
+ * This allows using decorated classes directly instead of manually creating
+ * SDK definition stubs:
+ *
+ * ```ts
+ * // Before: manual SDK definition stub
+ * const def = restate.service({ name: "payment", handlers: { ... } });
+ * ingress.serviceClient(def).charge({ amount: 100 });
+ *
+ * // After: pass the decorated class directly
+ * ingress.serviceClient(PaymentService).charge({ amount: 100 });
+ * ```
+ *
+ * All original SDK methods (`resolveAwakeable`, `rejectAwakeable`, `result`, etc.)
+ * are inherited from the base `Ingress` interface via intersection.
+ */
+export type Ingress = SdkIngress & {
+    /** Create a typed client for a decorated `@Service()` class. */
+    serviceClient<T>(target: Constructor<T>): IngressServiceClient<T>;
+    /** Create a typed client for a decorated `@VirtualObject()` class, keyed by `key`. */
+    objectClient<T>(target: Constructor<T>, key: string): IngressObjectClient<T>;
+    /** Create a typed client for a decorated `@Workflow()` class, keyed by `key`. */
+    workflowClient<T>(target: Constructor<T>, key: string): IngressWorkflowClient<T>;
+    /** Create a fire-and-forget client for a decorated `@Service()` class. */
+    serviceSendClient<T>(target: Constructor<T>): IngressSendServiceClient<T>;
+    /** Create a fire-and-forget client for a decorated `@VirtualObject()` class, keyed by `key`. */
+    objectSendClient<T>(target: Constructor<T>, key: string): IngressSendObjectClient<T>;
+};
