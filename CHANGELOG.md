@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.2.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.1.0...nestjs-restate-v2.2.0) (2026-03-03)
+
+
+### Features
+
+* **logging:** add getContextIfAvailable() to context store ([2fe684e](https://github.com/zackautocracy/nestjs-restate/commit/2fe684ee22937c7d4cc141b16f0f8499a52b44ed))
+* **logging:** add Restate LoggerTransport with NestJS-style formatting ([faffa3e](https://github.com/zackautocracy/nestjs-restate/commit/faffa3e034ff8439bcf6ecafdf8c3496c95b183a))
+* **logging:** add RestateLoggerService with context-aware dispatch ([0d427e8](https://github.com/zackautocracy/nestjs-restate/commit/0d427e86121f9db031f5fb0e5da172f7dce411ba))
+* **logging:** wire replay-aware logger into RestateModule ([297762c](https://github.com/zackautocracy/nestjs-restate/commit/297762c5bdb2bd0590b7c47deed9fa2a16f78dd6))
+
+
+### Bug Fixes
+
+* **logging:** harden formatMessage against unserializable values ([1cb3a5f](https://github.com/zackautocracy/nestjs-restate/commit/1cb3a5f28ded9c7616d2c35a9233469ca2b1737a))
+
+
+### Documentation
+
+* add replay-aware logger section to README and examples ([b048dd9](https://github.com/zackautocracy/nestjs-restate/commit/b048dd9465624a4616d677a0f0de6372ff3eabd0))
+
 ## [2.1.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.0.0...nestjs-restate-v2.1.0) (2026-03-02)
 
 
