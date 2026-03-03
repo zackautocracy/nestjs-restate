@@ -1,4 +1,5 @@
 import type { LoggerContext, LogMetadata } from "@restatedev/restate-sdk";
+import { RestateError, RetryableError, TerminalError } from "@restatedev/restate-sdk";
 import { createRestateLoggerTransport } from "nestjs-restate/logging/restate-logger.transport";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -199,5 +200,51 @@ describe("createRestateLoggerTransport", () => {
         // Verify the serialized error is NOT just "{}"
         expect(output).not.toMatch(/\s\{\}\s*$/);
         expect(output).toContain("test error");
+    });
+
+    it("should label TerminalError with [TerminalError]", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Failed", new TerminalError("permanent failure"));
+
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("[TerminalError]");
+        expect(output).toContain("permanent failure");
+    });
+
+    it("should label RetryableError with [RetryableError]", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "warn" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Retrying", new RetryableError("transient issue"));
+
+        const output =
+            (stdoutSpy.mock.calls[0]?.[0] as string) ?? (stderrSpy.mock.calls[0]?.[0] as string);
+        expect(output).toContain("[RetryableError]");
+        expect(output).toContain("transient issue");
+    });
+
+    it("should label RestateError with [RestateError]", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Restate error", new RestateError("internal"));
+
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("[RestateError]");
+        expect(output).toContain("internal");
     });
 });
