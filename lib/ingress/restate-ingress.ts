@@ -146,6 +146,14 @@ const INTERCEPTED_METHODS = new Set([
     "objectSendClient",
 ]);
 
+const EXPECTED_COMPONENT_TYPE: Record<string, string> = {
+    serviceClient: "service",
+    serviceSendClient: "service",
+    objectClient: "object",
+    objectSendClient: "object",
+    workflowClient: "workflow",
+};
+
 const warnedTargets = new Set<string>();
 
 function warnIfInsideHandler(targetName: string): void {
@@ -171,9 +179,16 @@ export function createRestateIngress(sdkIngress: SdkIngress): Ingress {
             return (...args: any[]) => {
                 const firstArg = args[0];
                 if (isRestateComponent(firstArg)) {
-                    const { name } = getComponentMeta(firstArg);
-                    warnIfInsideHandler(name);
-                    args[0] = { name };
+                    const meta = getComponentMeta(firstArg);
+                    const expectedType = EXPECTED_COMPONENT_TYPE[prop];
+                    if (meta.type !== expectedType) {
+                        throw new Error(
+                            `Method '${prop}' expects a ${expectedType} component, ` +
+                                `but '${meta.name}' is a ${meta.type} component.`,
+                        );
+                    }
+                    warnIfInsideHandler(meta.name);
+                    args[0] = { name: meta.name };
                 }
                 return target[prop](...args);
             };
