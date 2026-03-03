@@ -166,4 +166,38 @@ describe("createRestateLoggerTransport", () => {
         const output = stdoutSpy.mock.calls[0][0] as string;
         expect(output).toContain("42");
     });
+
+    it("should serialize Error objects with message and stack", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+        const error = new Error("something broke");
+
+        transport(params, "Operation failed", error);
+
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("something broke");
+        expect(output).toContain("[Error]");
+        expect(output).not.toContain("{}");
+    });
+
+    it("should not produce '{}' for Error objects", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Failed", new Error("test error"));
+
+        const output = stderrSpy.mock.calls[0][0] as string;
+        // The old bug: JSON.stringify(new Error()) produces "{}"
+        // Verify the serialized error is NOT just "{}"
+        expect(output).not.toMatch(/\s\{\}\s*$/);
+        expect(output).toContain("test error");
+    });
 });

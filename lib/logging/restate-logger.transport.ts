@@ -1,4 +1,5 @@
 import type { LoggerTransport, LogMetadata } from "@restatedev/restate-sdk";
+import { RestateError, RetryableError, TerminalError } from "@restatedev/restate-sdk";
 
 const LEVEL_LABELS: Record<string, string> = {
     trace: "VERBOSE",
@@ -26,8 +27,21 @@ const LEVEL_COLORS: Record<string, (text: string) => string> = {
     error: clc.red,
 };
 
-function safeStringify(value: any): string {
+function getErrorLabel(error: Error): string {
+    if (error instanceof TerminalError) return "[TerminalError]";
+    if (error instanceof RetryableError) return "[RetryableError]";
+    if (error instanceof RestateError) return "[RestateError]";
+    return "[Error]";
+}
+
+function serializeValue(value: unknown): string {
     if (typeof value === "string") return value;
+    if (value instanceof Error) {
+        const label = getErrorLabel(value);
+        const msg = value.message || "Unknown error";
+        const stack = value.stack ? `\n${value.stack}` : "";
+        return `${label} ${msg}${stack}`;
+    }
     try {
         return JSON.stringify(value);
     } catch {
@@ -36,9 +50,9 @@ function safeStringify(value: any): string {
 }
 
 function formatMessage(message: any, optionalParams: any[]): string {
-    const parts = [safeStringify(message)];
+    const parts = [serializeValue(message)];
     for (const param of optionalParams) {
-        parts.push(safeStringify(param));
+        parts.push(serializeValue(param));
     }
     return parts.join(" ");
 }
