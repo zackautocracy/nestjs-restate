@@ -39,10 +39,9 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/lcov.info
           fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Check exports
         run: yarn check:exports
