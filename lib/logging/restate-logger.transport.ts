@@ -35,6 +35,11 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
     month: "2-digit",
 });
 
+export interface RestateLoggerOptions {
+    /** Include stack traces in error output. Default: `false`. */
+    stackTraces?: boolean;
+}
+
 function getErrorLabel(error: Error): string {
     if (error instanceof TerminalError) return "[TerminalError]";
     if (error instanceof RetryableError) return "[RetryableError]";
@@ -42,12 +47,12 @@ function getErrorLabel(error: Error): string {
     return "[Error]";
 }
 
-function serializeValue(value: unknown): string {
+function serializeValue(value: unknown, includeStack: boolean): string {
     if (typeof value === "string") return value;
     if (value instanceof Error) {
         const label = getErrorLabel(value);
         const msg = value.message || "Unknown error";
-        const stack = value.stack ? `\n${value.stack}` : "";
+        const stack = includeStack && value.stack ? `\n${value.stack}` : "";
         return `${label} ${msg}${stack}`;
     }
     try {
@@ -57,10 +62,10 @@ function serializeValue(value: unknown): string {
     }
 }
 
-function formatMessage(message: any, optionalParams: any[]): string {
-    const parts = [serializeValue(message)];
+function formatMessage(message: unknown, optionalParams: unknown[], includeStack: boolean): string {
+    const parts = [serializeValue(message, includeStack)];
     for (const param of optionalParams) {
-        parts.push(serializeValue(param));
+        parts.push(serializeValue(param, includeStack));
     }
     return parts.join(" ");
 }
@@ -83,7 +88,9 @@ function resolveLogLevel(level: string, message: unknown, optionalParams: unknow
     return level;
 }
 
-export function createRestateLoggerTransport(): LoggerTransport {
+export function createRestateLoggerTransport(options?: RestateLoggerOptions): LoggerTransport {
+    const includeStack = options?.stackTraces ?? false;
+
     return (params: LogMetadata, message?: any, ...optionalParams: any[]) => {
         if (params.replaying) return;
 
@@ -93,7 +100,7 @@ export function createRestateLoggerTransport(): LoggerTransport {
         const effectiveLevel = resolveLogLevel(params.level, message, optionalParams);
         const levelLabel = LEVEL_LABELS[effectiveLevel] ?? "LOG";
         const colorFn = LEVEL_COLORS[effectiveLevel] ?? clc.green;
-        const formattedMessage = formatMessage(message, optionalParams);
+        const formattedMessage = formatMessage(message, optionalParams, includeStack);
 
         // Match NestJS ConsoleLogger.formatMessage layout exactly:
         // ${pidMessage}${timestamp} ${formattedLogLevel} ${contextMessage}${output}\n

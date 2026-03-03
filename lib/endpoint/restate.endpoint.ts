@@ -3,7 +3,11 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { DefaultServiceOptions } from "@restatedev/restate-sdk";
 import * as restate from "@restatedev/restate-sdk";
 import { createRestateLoggerTransport } from "../logging/restate-logger.transport";
-import type { EndpointConfig, RestateEndpointServerConfig } from "../restate.interfaces";
+import type {
+    EndpointConfig,
+    RestateEndpointServerConfig,
+    RestateErrorOptions,
+} from "../restate.interfaces";
 
 @Injectable()
 export class RestateEndpointManager {
@@ -30,6 +34,7 @@ export class RestateEndpointManager {
         endpointOptions?: {
             identityKeys?: string[];
             defaultServiceOptions?: DefaultServiceOptions;
+            errors?: RestateErrorOptions;
         },
     ): Promise<void> {
         if (this.endpointHandler || this.httpServer) {
@@ -45,7 +50,9 @@ export class RestateEndpointManager {
             services: this.definitions,
             identityKeys: endpointOptions?.identityKeys,
             defaultServiceOptions: endpointOptions?.defaultServiceOptions,
-            logger: createRestateLoggerTransport(),
+            logger: createRestateLoggerTransport({
+                stackTraces: endpointOptions?.errors?.stackTraces,
+            }),
         });
         this.endpointHandler = handler;
 

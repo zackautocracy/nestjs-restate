@@ -48,7 +48,7 @@ npm install nestjs-restate @restatedev/restate-sdk @restatedev/restate-sdk-clien
 
 ### Running Restate
 
-You also need a running [Restate server](https://docs.restate.dev/develop/local_dev/). The quickest way to get started locally:
+You also need a running [Restate server](https://docs.restate.dev/installation). The quickest way to get started locally:
 
 ```bash
 # Docker
@@ -58,7 +58,7 @@ docker run --name restate -p 8080:8080 -p 9070:9070 docker.io/restatedev/restate
 brew install restatedev/tap/restate-server && restate-server
 ```
 
-See the [Restate deployment docs](https://docs.restate.dev/deploy/overview/) for Kubernetes, AWS Lambda, and other deployment options.
+See the Restate deployment docs for [Kubernetes](https://docs.restate.dev/services/deploy/kubernetes), [AWS Lambda](https://docs.restate.dev/services/deploy/lambda), and other deployment options.
 
 ## Quick Start
 
@@ -81,10 +81,10 @@ export class AppModule {}
 
 ### 2. Define a service
 
-> **Note:** `stripe`, `mailer`, and `db` in the examples below are placeholders for your own providers or SDK clients — they are not provided by this package.
-
 ```typescript
 import { Service, Handler, RestateContext } from 'nestjs-restate';
+
+// stripe, mailer, db etc. in these examples are your own providers — not provided by this package
 
 @Service('payments')
 export class PaymentService {
@@ -462,19 +462,11 @@ this.ctx.console.log('direct SDK logging');   // also silenced during replay
 
 The logger transport automatically adjusts log levels to reduce noise and surface real problems:
 
-| Scenario | SDK level | Displayed as | Why |
-|---|---|---|---|
-| `TerminalError` in a side effect | WARN | **ERROR** | Permanent failure — needs attention |
-| `RetryableError` in a side effect | WARN | **DEBUG** | Transient — retries are normal |
-| `"Invocation suspended"` | INFO | **DEBUG** | Suspension is routine |
-
-Error objects are serialized with a type label and full stack trace instead of `{}`:
-
-```text
-ERROR [payment/charge] [TerminalError] Card declined
-    at PaymentService.charge (payment.service.ts:42:11)
-    ...
-```
+| Condition | Original level | Effective level |
+|---|---|---|
+| `TerminalError` at WARN | WARN | ERROR |
+| `RetryableError` / plain `Error` at WARN | WARN | DEBUG |
+| `"Invocation suspended"` at INFO | INFO | DEBUG |
 
 Recognized labels: `[TerminalError]`, `[RetryableError]`, `[RestateError]`, `[Error]`.
 
@@ -515,6 +507,9 @@ RestateModule.forRoot({
             exponentiationFactor: 2,
             maxInterval: 30_000,
         },
+    },
+    errors: {                                 // Error formatting in logs (see Logging)
+        stackTraces: true,                    // Include stack traces (default: false)
     },
 })
 ```

@@ -40,6 +40,11 @@ export interface AutoRegisterOptions {
     force?: boolean;
 }
 
+export interface RestateErrorOptions {
+    /** Include stack traces in error log output. Default: `false`. */
+    stackTraces?: boolean;
+}
+
 export interface RestateModuleOptions {
     /** Restate server ingress URL (e.g., http://restate:8080) */
     ingress: string;
@@ -59,6 +64,8 @@ export interface RestateModuleOptions {
      * Individual component options override these defaults.
      */
     defaultServiceOptions?: DefaultServiceOptions;
+    /** Error formatting options for the logger transport. */
+    errors?: RestateErrorOptions;
 }
 
 export interface RestateModuleAsyncOptions {

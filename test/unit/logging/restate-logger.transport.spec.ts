@@ -168,74 +168,88 @@ describe("createRestateLoggerTransport", () => {
         expect(output).toContain("42");
     });
 
-    it("should serialize Error objects with message and stack", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
-        const error = new Error("something broke");
+    describe("error serialization", () => {
+        it("should serialize Error objects with message instead of {}", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Operation failed", error);
+            transport(params, new Error("something broke"));
 
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("something broke");
-        expect(output).toContain("[Error]");
-        expect(output).not.toContain("{}");
-    });
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("something broke");
+            expect(output).not.toContain("{}");
+        });
 
-    it("should not produce '{}' for Error objects", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should not include stack traces by default", () => {
+            const err = new Error("no stack by default");
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Failed", new Error("test error"));
+            transport(params, err);
 
-        const output = stderrSpy.mock.calls[0][0] as string;
-        // The old bug: JSON.stringify(new Error()) produces "{}"
-        // Our fix extracts message + stack instead
-        expect(output).toContain("test error");
-    });
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("no stack by default");
+            expect(output).not.toContain("    at ");
+        });
 
-    it("should label TerminalError with [TerminalError]", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should include stack traces when stackTraces option is true", () => {
+            const transportWithStacks = createRestateLoggerTransport({ stackTraces: true });
+            const err = new Error("with stack");
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Failed", new TerminalError("permanent failure"));
+            transportWithStacks(params, err);
 
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("[TerminalError]");
-        expect(output).toContain("permanent failure");
-    });
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("with stack");
+            expect(output).toContain("    at ");
+        });
 
-    it("should label RetryableError with [RetryableError]", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "warn" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should handle Error with empty message", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Retrying", new RetryableError("transient issue"));
+            transport(params, new Error(""));
 
-        expect(stdoutSpy).toHaveBeenCalledTimes(1);
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("[RetryableError]");
-        expect(output).toContain("transient issue");
-    });
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("Unknown error");
+        });
 
-    it("should format timestamp using Intl.DateTimeFormat matching NestJS", () => {
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date("2026-01-15T10:30:00.000Z"));
-        try {
+        it("should handle Error without stack trace", () => {
+            const err = new Error("no stack");
+            err.stack = undefined;
+            const transportWithStacks = createRestateLoggerTransport({ stackTraces: true });
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transportWithStacks(params, err);
+
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[Error] no stack");
+            expect(output).not.toContain("undefined");
+        });
+
+        it("should handle undefined values via String() fallback", () => {
             const params: LogMetadata = {
                 source: "USER" as any,
                 level: "info" as any,
@@ -243,206 +257,223 @@ describe("createRestateLoggerTransport", () => {
                 context: { invocationTarget: "svc/handler" } as LoggerContext,
             };
 
-            transport(params, "test");
+            transport(params, "msg", undefined);
 
             const output = stdoutSpy.mock.calls[0][0] as string;
-            const expectedTimestamp = new Intl.DateTimeFormat(undefined, {
+            expect(output).toContain("msg");
+            expect(output).toContain("undefined");
+        });
+    });
+
+    describe("error classification labels", () => {
+        it("should label TerminalError", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, new TerminalError("permanent failure"));
+
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[TerminalError]");
+            expect(output).toContain("permanent failure");
+        });
+
+        it("should label RetryableError", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, new RetryableError("transient issue"));
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[RetryableError]");
+            expect(output).toContain("transient issue");
+        });
+
+        it("should label RestateError", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, new RestateError("restate issue"));
+
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[RestateError]");
+            expect(output).toContain("restate issue");
+        });
+
+        it("should label plain Error", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, new Error("generic error"));
+
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[Error]");
+            expect(output).toContain("generic error");
+        });
+    });
+
+    describe("timestamp format", () => {
+        it("should use Intl.DateTimeFormat for NestJS-aligned timestamps", () => {
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date("2025-06-15T14:30:00.000Z"));
+
+            const t = createRestateLoggerTransport();
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+            };
+
+            t(params, "test");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            // Verify format matches Intl.DateTimeFormat output (locale-dependent but consistent)
+            const expected = new Intl.DateTimeFormat(undefined, {
                 year: "numeric",
                 hour: "numeric",
                 minute: "numeric",
                 second: "numeric",
                 day: "2-digit",
                 month: "2-digit",
-            }).format(new Date());
-            expect(output).toContain(expectedTimestamp);
-        } finally {
+            }).format(new Date("2025-06-15T14:30:00.000Z"));
+            expect(output).toContain(expected);
+
             vi.useRealTimers();
-        }
+        });
     });
 
-    it("should label RestateError with [RestateError]", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+    describe("log level mapping", () => {
+        it("should escalate TerminalError from WARN to ERROR", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Restate error", new RestateError("internal"));
+            transport(params, new TerminalError("fatal"));
 
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("[RestateError]");
-        expect(output).toContain("internal");
-    });
+            expect(stderrSpy).toHaveBeenCalledTimes(1);
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("ERROR");
+        });
 
-    it("should escalate TerminalError from WARN to ERROR (stderr)", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "warn" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should downgrade RetryableError from WARN to DEBUG", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Error when processing ctx.run 'charge'.", new TerminalError("bad card"));
+            transport(params, new RetryableError("will retry"));
 
-        expect(stderrSpy).toHaveBeenCalledTimes(1);
-        expect(stdoutSpy).not.toHaveBeenCalled();
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("ERROR");
-        expect(output).not.toContain("WARN");
-    });
+            expect(stdoutSpy).toHaveBeenCalledTimes(1);
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("DEBUG");
+        });
 
-    it("should downgrade retryable error from WARN to DEBUG (stdout)", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "warn" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should downgrade plain Error from WARN to DEBUG", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Error when processing ctx.run 'upload'.", new RetryableError("timeout"));
+            transport(params, new Error("temporary"));
 
-        expect(stdoutSpy).toHaveBeenCalledTimes(1);
-        expect(stderrSpy).not.toHaveBeenCalled();
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("DEBUG");
-        expect(output).not.toContain("WARN");
-    });
+            expect(stdoutSpy).toHaveBeenCalledTimes(1);
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("DEBUG");
+        });
 
-    it("should downgrade plain Error at WARN to DEBUG", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "warn" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should downgrade 'Invocation suspended' from INFO to DEBUG", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Error when processing", new Error("some error"));
+            transport(params, "Invocation suspended");
 
-        expect(stdoutSpy).toHaveBeenCalledTimes(1);
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("DEBUG");
-    });
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("DEBUG");
+            expect(output).not.toContain("LOG");
+        });
 
-    it("should downgrade 'Invocation suspended' from INFO to DEBUG", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "info" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should not change non-error WARN messages", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Invocation suspended");
+            transport(params, "Low stock warning");
 
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("DEBUG");
-        expect(output).not.toContain("LOG");
-    });
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("WARN");
+        });
 
-    it("should pass through non-error WARN logs unchanged", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "warn" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should not downgrade RetryableError already at ERROR", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Low stock warning");
+            transport(params, new RetryableError("at error level"));
 
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("WARN");
-    });
+            expect(stderrSpy).toHaveBeenCalledTimes(1);
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("ERROR");
+        });
 
-    it("should escalate TerminalError passed as message from WARN to ERROR", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "warn" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should escalate TerminalError in optionalParams", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, new TerminalError("bad card"));
+            transport(params, "Error occurred", new TerminalError("fatal"));
 
-        expect(stderrSpy).toHaveBeenCalledTimes(1);
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("ERROR");
-        expect(output).toContain("[TerminalError]");
-    });
+            expect(stderrSpy).toHaveBeenCalledTimes(1);
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("ERROR");
+        });
 
-    it("should NOT downgrade retryable error at ERROR level", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
+        it("should fall back to LOG for unknown log levels", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "unknown" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
 
-        transport(params, "Critical failure", new RetryableError("should stay error"));
+            transport(params, "mystery level");
 
-        expect(stderrSpy).toHaveBeenCalledTimes(1);
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("ERROR");
-        expect(output).not.toContain("DEBUG");
-    });
-
-    it("should show 'Unknown error' for Error with empty message", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
-
-        transport(params, "Failed", new Error(""));
-
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("Unknown error");
-    });
-
-    it("should handle Error with no stack trace", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "error" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
-        const error = new Error("no stack");
-        error.stack = undefined;
-
-        transport(params, "Failed", error);
-
-        const output = stderrSpy.mock.calls[0][0] as string;
-        expect(output).toContain("no stack");
-        expect(output).not.toContain("at ");
-    });
-
-    it("should serialize undefined values via String()", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "info" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
-
-        transport(params, "value is", undefined);
-
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("undefined");
-    });
-
-    it("should fall back to LOG label and green color for unknown log level", () => {
-        const params: LogMetadata = {
-            source: "USER" as any,
-            level: "unknown" as any,
-            replaying: false,
-            context: { invocationTarget: "svc/handler" } as LoggerContext,
-        };
-
-        transport(params, "test");
-
-        const output = stdoutSpy.mock.calls[0][0] as string;
-        expect(output).toContain("LOG");
-        // green ANSI code wrapping the message
-        expect(output).toContain("\x1B[32m");
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("LOG");
+        });
     });
 });

@@ -75,6 +75,7 @@ export type {
 export { createRestateIngress } from "./ingress/restate-ingress";
 // Logging
 export { RestateLoggerService } from "./logging/restate-logger.service";
+export type { RestateLoggerOptions } from "./logging/restate-logger.transport";
 export { createRestateLoggerTransport } from "./logging/restate-logger.transport";
 // Proxy types
 export type {
@@ -96,6 +97,7 @@ export type {
     AnyHandlerOpts,
     AutoRegisterOptions,
     EndpointConfig,
+    RestateErrorOptions,
     RestateModuleAsyncOptions,
     RestateModuleOptions,
     ServiceComponentMetadata,
