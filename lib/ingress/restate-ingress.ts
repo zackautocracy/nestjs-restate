@@ -179,6 +179,14 @@ export function createRestateIngress(sdkIngress: SdkIngress): Ingress {
             }
             return (...args: any[]) => {
                 const firstArg = args[0];
+                if (typeof firstArg === "function" && !isRestateComponent(firstArg)) {
+                    const className = firstArg.name || "<anonymous>";
+                    throw new Error(
+                        `Class '${className}' has no Restate component decorator. ` +
+                            `Add @Service(), @VirtualObject(), or @Workflow(), ` +
+                            `or pass an SDK definition object.`,
+                    );
+                }
                 if (isRestateComponent(firstArg)) {
                     const meta = getComponentMeta(firstArg);
                     const expectedType = EXPECTED_COMPONENT_TYPE[prop];

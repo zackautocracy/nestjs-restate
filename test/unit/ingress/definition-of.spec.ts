@@ -1,10 +1,12 @@
 import "reflect-metadata";
-import { Service, VirtualObject, Workflow } from "nestjs-restate";
 import {
     objectDefinitionOf,
+    Service,
     serviceDefinitionOf,
+    VirtualObject,
+    Workflow,
     workflowDefinitionOf,
-} from "nestjs-restate/ingress/definition-of";
+} from "nestjs-restate";
 import { describe, expect, it } from "vitest";
 
 @Service("payment")

@@ -133,11 +133,10 @@ describe("createRestateIngress", () => {
     });
 
     describe("error handling", () => {
-        it("should pass non-decorated class through as-is (SDK handles errors)", () => {
-            ingress.serviceClient(NotDecorated as any);
-
-            // NotDecorated is not a Restate component, so it passes through unchanged
-            expect(mockSdk.serviceClient).toHaveBeenCalledWith(NotDecorated);
+        it("should throw for non-decorated class", () => {
+            expect(() => ingress.serviceClient(NotDecorated as any)).toThrow(
+                /Class 'NotDecorated' has no Restate component decorator/,
+            );
         });
     });
 
@@ -214,6 +213,22 @@ describe("createRestateIngress", () => {
         it("should throw when passing @Service class to objectSendClient", () => {
             expect(() => ingress.objectSendClient(PaymentService as any, "key")).toThrow(
                 "Method 'objectSendClient' expects an object component, but 'payment' is a service component.",
+            );
+        });
+    });
+
+    describe("undecorated class guard", () => {
+        it("should throw when passing an undecorated class to serviceClient", () => {
+            class PlainClass {}
+            expect(() => ingress.serviceClient(PlainClass as any)).toThrow(
+                /Class 'PlainClass' has no Restate component decorator/,
+            );
+        });
+
+        it("should throw when passing an undecorated class to objectClient", () => {
+            class PlainClass {}
+            expect(() => ingress.objectClient(PlainClass as any, "key")).toThrow(
+                /has no Restate component decorator/,
             );
         });
     });
