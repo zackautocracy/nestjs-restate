@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { Handler, RestateContext, Shared, VirtualObject } from "nestjs-restate";
 import type { CartItem } from "../shared/interfaces";
 
@@ -5,9 +6,14 @@ import type { CartItem } from "../shared/interfaces";
  * Virtual Object — keyed cart state per user.
  * @Handler methods run exclusively (one at a time per key).
  * @Shared methods run concurrently (safe for reads).
+ *
+ * Uses the standard NestJS Logger — it's automatically replay-safe
+ * inside Restate handlers (no extra setup needed).
  */
 @VirtualObject("cart")
 export class CartObject {
+    private readonly logger = new Logger(CartObject.name);
+
     constructor(private readonly ctx: RestateContext) {}
 
     @Handler()
@@ -17,8 +23,10 @@ export class CartObject {
 
         if (existing) {
             existing.quantity += item.quantity;
+            this.logger.log(`Updated quantity for ${item.productId} → ${existing.quantity}`);
         } else {
             items.push(item);
+            this.logger.log(`Added ${item.productId} (qty: ${item.quantity})`);
         }
 
         this.ctx.set("items", items);
@@ -30,12 +38,14 @@ export class CartObject {
         const items = (await this.ctx.get<CartItem[]>("items")) ?? [];
         const filtered = items.filter((i) => i.productId !== productId);
         this.ctx.set("items", filtered);
+        this.logger.log(`Removed ${productId}, ${filtered.length} items remaining`);
         return filtered;
     }
 
     @Handler()
     async clear(): Promise<void> {
         this.ctx.clearAll();
+        this.logger.log("Cart cleared");
     }
 
     @Shared()
