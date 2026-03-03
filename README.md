@@ -458,6 +458,26 @@ this.ctx.console.log('direct SDK logging');   // also silenced during replay
 | `verbose` | `trace` |
 | `fatal` | `error` |
 
+### Error Formatting
+
+The logger transport automatically adjusts SDK-internal log levels to reduce noise and surface real problems:
+
+| Scenario | SDK level | Displayed as | Why |
+|---|---|---|---|
+| `TerminalError` in a side effect | WARN | **ERROR** | Permanent failure — needs attention |
+| Retryable error in a side effect | WARN | **DEBUG** | Transient — retries are normal |
+| `"Invocation suspended"` | INFO | **DEBUG** | Suspension is routine |
+
+Error objects are serialized with a type label and full stack trace instead of `{}`:
+
+```
+ERROR [payment/charge] [TerminalError] Card declined
+    at PaymentService.charge (payment.service.ts:42:11)
+    ...
+```
+
+Recognized labels: `[TerminalError]`, `[RetryableError]`, `[RestateError]`, `[Error]`.
+
 ### Exports
 
 All logging primitives are re-exported from `nestjs-restate` if you need to customize:
