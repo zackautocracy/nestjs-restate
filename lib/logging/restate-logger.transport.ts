@@ -67,6 +67,8 @@ function formatMessage(message: any, optionalParams: any[]): string {
 }
 
 function resolveLogLevel(level: string, message: unknown, optionalParams: unknown[]): string {
+    // Match SDK-internal "Invocation suspended" message (from @restatedev/restate-sdk).
+    // If the SDK changes this wording, this check may need updating.
     if (
         level === "info" &&
         typeof message === "string" &&

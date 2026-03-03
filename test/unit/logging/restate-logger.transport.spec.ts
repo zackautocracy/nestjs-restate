@@ -227,8 +227,8 @@ describe("createRestateLoggerTransport", () => {
 
         transport(params, "Retrying", new RetryableError("transient issue"));
 
-        const output =
-            (stdoutSpy.mock.calls[0]?.[0] as string) ?? (stderrSpy.mock.calls[0]?.[0] as string);
+        expect(stdoutSpy).toHaveBeenCalledTimes(1);
+        const output = stdoutSpy.mock.calls[0][0] as string;
         expect(output).toContain("[RetryableError]");
         expect(output).toContain("transient issue");
     });
@@ -347,5 +347,21 @@ describe("createRestateLoggerTransport", () => {
 
         const output = stdoutSpy.mock.calls[0][0] as string;
         expect(output).toContain("WARN");
+    });
+
+    it("should NOT downgrade retryable error at ERROR level", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Critical failure", new RetryableError("should stay error"));
+
+        expect(stderrSpy).toHaveBeenCalledTimes(1);
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("ERROR");
+        expect(output).not.toContain("DEBUG");
     });
 });
