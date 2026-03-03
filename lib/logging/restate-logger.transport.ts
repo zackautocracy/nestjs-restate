@@ -27,6 +27,15 @@ const LEVEL_COLORS: Record<string, (text: string) => string> = {
     error: clc.red,
 };
 
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    day: "2-digit",
+    month: "2-digit",
+});
+
 function getErrorLabel(error: Error): string {
     if (error instanceof TerminalError) return "[TerminalError]";
     if (error instanceof RetryableError) return "[RetryableError]";
@@ -61,7 +70,7 @@ export function createRestateLoggerTransport(): LoggerTransport {
     return (params: LogMetadata, message?: any, ...optionalParams: any[]) => {
         if (params.replaying) return;
 
-        const timestamp = new Date().toLocaleString("en-US");
+        const timestamp = dateTimeFormatter.format(Date.now());
         const pid = process.pid;
         const context = params.context?.invocationTarget ?? "Restate";
         const levelLabel = LEVEL_LABELS[params.level] ?? "LOG";
