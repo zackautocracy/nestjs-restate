@@ -91,9 +91,17 @@ export type IngressSendObjectClient<T> = IngressSendServiceClient<T>;
 
 // ── Enhanced Ingress Interface ──
 
+/** Methods intercepted by the enhanced Ingress — omitted from base to prevent type conflicts. */
+type InterceptedMethods =
+    | "serviceClient"
+    | "objectClient"
+    | "workflowClient"
+    | "serviceSendClient"
+    | "objectSendClient";
+
 /**
- * Enhanced Ingress interface that extends the SDK's Ingress with additional
- * overloads accepting NestJS decorated class constructors.
+ * Enhanced Ingress interface that extends the SDK's Ingress with overloads
+ * accepting NestJS decorated class constructors.
  *
  * This allows using decorated classes directly instead of manually creating
  * SDK definition stubs:
@@ -107,10 +115,15 @@ export type IngressSendObjectClient<T> = IngressSendServiceClient<T>;
  * ingress.serviceClient(PaymentService).charge({ amount: 100 });
  * ```
  *
- * All original SDK methods (`resolveAwakeable`, `rejectAwakeable`, `result`, etc.)
- * are inherited from the base `Ingress` interface via intersection.
+ * Non-intercepted SDK methods (`resolveAwakeable`, `rejectAwakeable`, `result`)
+ * are inherited from the base `Ingress` interface via `extends Omit<...>`.
+ *
+ * SDK definition-based overloads are replaced with class-based overloads.
+ * Use `serviceDefinitionOf()` / `objectDefinitionOf()` / `workflowDefinitionOf()`
+ * if you need to pass an SDK definition to a method that expects one.
  */
-export type Ingress = SdkIngress & {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Ingress extends Omit<SdkIngress, InterceptedMethods> {
     /** Create a typed client for a decorated `@Service()` class. */
     serviceClient<T>(target: Constructor<T>): IngressServiceClient<T>;
     /** Create a typed client for a decorated `@VirtualObject()` class, keyed by `key`. */
@@ -121,7 +134,7 @@ export type Ingress = SdkIngress & {
     serviceSendClient<T>(target: Constructor<T>): IngressSendServiceClient<T>;
     /** Create a fire-and-forget client for a decorated `@VirtualObject()` class, keyed by `key`. */
     objectSendClient<T>(target: Constructor<T>, key: string): IngressSendObjectClient<T>;
-};
+}
 
 // ── Runtime Implementation ──
 
