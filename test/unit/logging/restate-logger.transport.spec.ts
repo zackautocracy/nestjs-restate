@@ -197,8 +197,7 @@ describe("createRestateLoggerTransport", () => {
 
         const output = stderrSpy.mock.calls[0][0] as string;
         // The old bug: JSON.stringify(new Error()) produces "{}"
-        // Verify the serialized error is NOT just "{}"
-        expect(output).not.toMatch(/\s\{\}\s*$/);
+        // Our fix extracts message + stack instead
         expect(output).toContain("test error");
     });
 

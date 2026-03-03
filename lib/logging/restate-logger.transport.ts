@@ -9,19 +9,18 @@ const LEVEL_LABELS: Record<string, string> = {
     error: "ERROR",
 };
 
-// ANSI color codes matching NestJS ConsoleLogger
+// ANSI color codes matching NestJS ConsoleLogger (cli-colors.util.js)
 const clc = {
     green: (text: string) => `\x1B[32m${text}\x1B[39m`,
     yellow: (text: string) => `\x1B[33m${text}\x1B[39m`,
     red: (text: string) => `\x1B[31m${text}\x1B[39m`,
-    magenta: (text: string) => `\x1B[35m${text}\x1B[39m`,
-    cyan: (text: string) => `\x1B[36m${text}\x1B[39m`,
-    bold: (text: string) => `\x1B[1m${text}\x1B[22m`,
+    magentaBright: (text: string) => `\x1B[95m${text}\x1B[39m`,
+    cyanBright: (text: string) => `\x1B[96m${text}\x1B[39m`,
 };
 
 const LEVEL_COLORS: Record<string, (text: string) => string> = {
-    trace: clc.magenta,
-    debug: clc.magenta,
+    trace: clc.cyanBright,
+    debug: clc.magentaBright,
     info: clc.green,
     warn: clc.yellow,
     error: clc.red,
@@ -52,7 +51,7 @@ function serializeValue(value: unknown): string {
         return `${label} ${msg}${stack}`;
     }
     try {
-        return JSON.stringify(value);
+        return JSON.stringify(value) ?? String(value);
     } catch {
         return String(value);
     }
@@ -96,13 +95,14 @@ export function createRestateLoggerTransport(): LoggerTransport {
         const colorFn = LEVEL_COLORS[effectiveLevel] ?? clc.green;
         const formattedMessage = formatMessage(message, optionalParams);
 
-        // Write directly to stdout/stderr — NEVER use NestJS Logger here
-        // to avoid circular delegation (Logger → ctx.console → transport → Logger)
+        // Match NestJS ConsoleLogger.formatMessage layout exactly:
+        // ${pidMessage}${timestamp} ${formattedLogLevel} ${contextMessage}${output}\n
+        const pidSection = `[Nest] ${pid}  - `;
         const output =
-            clc.green("[Nest] ") +
-            clc.bold(String(pid)) +
-            `  - ${timestamp}     ` +
-            colorFn(`${levelLabel.padStart(7)} `) +
+            colorFn(pidSection) +
+            `${timestamp} ` +
+            colorFn(levelLabel.padStart(7)) +
+            ` ` +
             clc.yellow(`[${context}] `) +
             colorFn(formattedMessage) +
             "\n";
