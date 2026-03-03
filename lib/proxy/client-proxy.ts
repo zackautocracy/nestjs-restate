@@ -1,10 +1,6 @@
 import type { InvocationHandle, SendOpts } from "@restatedev/restate-sdk";
 import { getCurrentContext } from "../context/restate-context.store";
-import {
-    SERVICE_METADATA_KEY,
-    VIRTUAL_OBJECT_METADATA_KEY,
-    WORKFLOW_METADATA_KEY,
-} from "../restate.constants";
+import { getComponentMeta } from "../registry/component-metadata";
 
 // ── Proxy Types ──
 
@@ -85,19 +81,6 @@ function createMethodProxy(getClient: (ctx: any) => any, getSendClient: (ctx: an
             };
         },
     });
-}
-
-function getComponentMeta(target: any): { type: "service" | "object" | "workflow"; name: string } {
-    const svc = Reflect.getMetadata(SERVICE_METADATA_KEY, target);
-    if (svc) return { type: "service", name: svc.name };
-    const obj = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, target);
-    if (obj) return { type: "object", name: obj.name };
-    const wf = Reflect.getMetadata(WORKFLOW_METADATA_KEY, target);
-    if (wf) return { type: "workflow", name: wf.name };
-    throw new Error(
-        `${target.name} has no Restate component decorator. ` +
-            `Add @Service(), @VirtualObject(), or @Workflow() to use it with @InjectClient().`,
-    );
 }
 
 export function createClientProxy(target: any): any {
