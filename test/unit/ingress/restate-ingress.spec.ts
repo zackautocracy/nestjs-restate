@@ -180,4 +180,36 @@ describe("createRestateIngress", () => {
             warnSpy.mockRestore();
         });
     });
+
+    describe("component type mismatch", () => {
+        it("should throw when passing @Workflow class to serviceClient", () => {
+            expect(() => ingress.serviceClient(OrderWorkflow as any)).toThrow(
+                "Method 'serviceClient' expects a service component, but 'order' is a workflow component.",
+            );
+        });
+
+        it("should throw when passing @Service class to objectClient", () => {
+            expect(() => ingress.objectClient(PaymentService as any, "key")).toThrow(
+                "Method 'objectClient' expects a object component, but 'payment' is a service component.",
+            );
+        });
+
+        it("should throw when passing @VirtualObject class to workflowClient", () => {
+            expect(() => ingress.workflowClient(CartObject as any, "key")).toThrow(
+                "Method 'workflowClient' expects a workflow component, but 'cart' is a object component.",
+            );
+        });
+
+        it("should throw when passing @Workflow class to serviceSendClient", () => {
+            expect(() => ingress.serviceSendClient(OrderWorkflow as any)).toThrow(
+                "Method 'serviceSendClient' expects a service component, but 'order' is a workflow component.",
+            );
+        });
+
+        it("should throw when passing @Service class to objectSendClient", () => {
+            expect(() => ingress.objectSendClient(PaymentService as any, "key")).toThrow(
+                "Method 'objectSendClient' expects a object component, but 'payment' is a service component.",
+            );
+        });
+    });
 });
