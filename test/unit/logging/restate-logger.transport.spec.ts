@@ -363,4 +363,65 @@ describe("createRestateLoggerTransport", () => {
         expect(output).toContain("ERROR");
         expect(output).not.toContain("DEBUG");
     });
+
+    it("should show 'Unknown error' for Error with empty message", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "Failed", new Error(""));
+
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("Unknown error");
+    });
+
+    it("should handle Error with no stack trace", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "error" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+        const error = new Error("no stack");
+        error.stack = undefined;
+
+        transport(params, "Failed", error);
+
+        const output = stderrSpy.mock.calls[0][0] as string;
+        expect(output).toContain("no stack");
+        expect(output).not.toContain("at ");
+    });
+
+    it("should serialize undefined values via String()", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "value is", undefined);
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("undefined");
+    });
+
+    it("should fall back to LOG label and green color for unknown log level", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "unknown" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "test");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        expect(output).toContain("LOG");
+        // green ANSI code wrapping the message
+        expect(output).toContain("\x1B[32m");
+    });
 });
