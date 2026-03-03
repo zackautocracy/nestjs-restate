@@ -1,0 +1,58 @@
+import "reflect-metadata";
+import { Service, VirtualObject, Workflow } from "nestjs-restate";
+import {
+    objectDefinitionOf,
+    serviceDefinitionOf,
+    workflowDefinitionOf,
+} from "nestjs-restate/ingress/definition-of";
+import { describe, expect, it } from "vitest";
+
+@Service("payment")
+class PaymentService {
+    async charge(req: { amount: number }): Promise<string> {
+        return "ref";
+    }
+}
+
+@VirtualObject("cart")
+class CartObject {
+    async addItem(item: { name: string }): Promise<void> {}
+}
+
+@Workflow("order")
+class OrderWorkflow {
+    async run(input: { userId: string }): Promise<string> {
+        return "done";
+    }
+}
+
+class NotDecorated {}
+
+describe("definitionOf utilities", () => {
+    describe("serviceDefinitionOf", () => {
+        it("should return { name } from @Service metadata", () => {
+            const def = serviceDefinitionOf(PaymentService);
+            expect(def).toEqual({ name: "payment" });
+        });
+
+        it("should throw for non-decorated class", () => {
+            expect(() => serviceDefinitionOf(NotDecorated as any)).toThrow(
+                /has no Restate component decorator/,
+            );
+        });
+    });
+
+    describe("objectDefinitionOf", () => {
+        it("should return { name } from @VirtualObject metadata", () => {
+            const def = objectDefinitionOf(CartObject);
+            expect(def).toEqual({ name: "cart" });
+        });
+    });
+
+    describe("workflowDefinitionOf", () => {
+        it("should return { name } from @Workflow metadata", () => {
+            const def = workflowDefinitionOf(OrderWorkflow);
+            expect(def).toEqual({ name: "order" });
+        });
+    });
+});
