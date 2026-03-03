@@ -233,6 +233,29 @@ describe("createRestateLoggerTransport", () => {
         expect(output).toContain("transient issue");
     });
 
+    it("should format timestamp using Intl.DateTimeFormat matching NestJS", () => {
+        const params: LogMetadata = {
+            source: "USER" as any,
+            level: "info" as any,
+            replaying: false,
+            context: { invocationTarget: "svc/handler" } as LoggerContext,
+        };
+
+        transport(params, "test");
+
+        const output = stdoutSpy.mock.calls[0][0] as string;
+        // NestJS uses: new Intl.DateTimeFormat(undefined, { year, month, day, hour, minute, second })
+        const expectedTimestamp = new Intl.DateTimeFormat(undefined, {
+            year: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+            day: "2-digit",
+            month: "2-digit",
+        }).format(Date.now());
+        expect(output).toContain(expectedTimestamp);
+    });
+
     it("should label RestateError with [RestateError]", () => {
         const params: LogMetadata = {
             source: "USER" as any,
