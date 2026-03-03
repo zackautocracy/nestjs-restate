@@ -24,6 +24,7 @@ Define Restate workflows, services, and virtual objects as regular NestJS inject
 - **Typed service proxies** — call other Restate services with full type safety via `@InjectClient(ServiceClass)`
 - **Auto-discovery** — decorated classes are registered automatically, no manual wiring
 - **SDK configuration passthrough** — retry policies, timeouts, and handler options forwarded to the Restate SDK
+- **Replay-aware logging** — NestJS `Logger` calls are automatically silenced during replay, zero config
 - **Multiple endpoint modes** — standalone port, external HTTP/2 server, or AWS Lambda
 
 ## Installation
@@ -401,6 +402,77 @@ This also works per-component via decorator options:
 ```
 
 All error classes (`TerminalError`, `RetryableError`, `TimeoutError`, `CancelledError`, `RestateError`) are re-exported from `nestjs-restate`.
+
+## Logging
+
+`nestjs-restate` ships a **replay-aware logger** that works automatically — no setup required.
+
+### How It Works
+
+Restate replays handler invocations to rebuild state after crashes. During replay, log statements would produce duplicate, misleading output. The replay-aware logger solves this at two levels:
+
+| Direction | What happens |
+|---|---|
+| **NestJS → Restate** | `Logger.overrideLogger()` redirects all NestJS log calls. Inside a handler, logs are forwarded to `ctx.console` (replay-aware). Outside a handler, logs fall through to a standard `ConsoleLogger`. |
+| **Restate → NestJS** | A custom `LoggerTransport` is passed to `createEndpointHandler()`. SDK-internal messages are formatted with NestJS-style ANSI colors and written directly to stdout/stderr, and silenced during replay. |
+
+### Usage
+
+Use the standard NestJS `Logger` — it's replay-safe inside handlers with zero extra code:
+
+```typescript
+import { Logger } from '@nestjs/common';
+import { Service, Handler, RestateContext } from 'nestjs-restate';
+
+@Service('greeter')
+export class GreeterService {
+    private readonly logger = new Logger(GreeterService.name);
+
+    constructor(private readonly ctx: RestateContext) {}
+
+    @Handler()
+    async greet(name: string) {
+        this.logger.log(`Greeting ${name}`);           // silenced during replay
+        this.logger.debug(`Building greeting string`); // silenced during replay
+
+        const greeting = await this.ctx.run('greeting', () => `Hello, ${name}!`);
+
+        this.logger.log(`Greeting ready: ${greeting}`); // silenced during replay
+        return greeting;
+    }
+}
+```
+
+You can also call `this.ctx.console` directly — both approaches are replay-safe:
+
+```typescript
+this.ctx.console.log('direct SDK logging');   // also silenced during replay
+```
+
+### Level Mapping
+
+| NestJS level | Restate `ctx.console` method |
+|---|---|
+| `log` | `info` |
+| `error` | `error` |
+| `warn` | `warn` |
+| `debug` | `debug` |
+| `verbose` | `trace` |
+| `fatal` | `error` |
+
+### Exports
+
+All logging primitives are re-exported from `nestjs-restate` if you need to customize:
+
+```typescript
+import {
+    RestateLoggerService,           // NestJS LoggerService implementation
+    createRestateLoggerTransport,   // SDK LoggerTransport factory
+    type LoggerTransport,           // SDK type
+    type LoggerContext,             // SDK type
+    type LogMetadata,               // SDK type
+} from 'nestjs-restate';
+```
 
 ## Configuration
 

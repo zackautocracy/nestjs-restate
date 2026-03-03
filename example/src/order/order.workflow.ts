@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import {
     InjectClient,
     type ObjectClient,
@@ -19,9 +20,12 @@ import type { OrderRequest, OrderResult } from "../shared/interfaces";
  *   - ctx.run() for durable side effects
  *   - ctx.promise() for external signals (shipment confirmation)
  *   - ctx.key for workflow identity
+ *   - NestJS Logger for replay-safe logging (automatic, no setup)
  */
 @Workflow("order")
 export class OrderWorkflow {
+    private readonly logger = new Logger(OrderWorkflow.name);
+
     constructor(
         private readonly ctx: RestateContext,
         @InjectClient(PaymentService) private readonly payment: ServiceClient<PaymentService>,
@@ -44,7 +48,7 @@ export class OrderWorkflow {
         const rawTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const total = Math.round(rawTotal * 100) / 100;
 
-        this.ctx.console.log(`Order ${orderId}: ${items.length} items, total $${total.toFixed(2)}`);
+        this.logger.log(`Order ${orderId}: ${items.length} items, total $${total.toFixed(2)}`);
 
         // 2. Charge payment (durable RPC to PaymentService)
         const charge = await this.payment.charge({ amount: total, currency: "USD" });
@@ -55,7 +59,7 @@ export class OrderWorkflow {
         // 4. Clear the user's cart
         await this.cart.key(input.userId).clear();
 
-        this.ctx.console.log(`Order ${orderId} fulfilled — tracking: ${trackingNumber}`);
+        this.logger.log(`Order ${orderId} fulfilled — tracking: ${trackingNumber}`);
 
         return {
             orderId,
