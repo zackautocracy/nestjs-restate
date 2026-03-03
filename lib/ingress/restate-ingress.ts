@@ -156,13 +156,14 @@ const EXPECTED_COMPONENT_TYPE: Record<string, string> = {
 
 const warnedTargets = new Set<string>();
 
-function warnIfInsideHandler(targetName: string): void {
+function warnIfInsideHandler(targetName: string, className?: string): void {
     if (getContextIfAvailable() && !warnedTargets.has(targetName)) {
         warnedTargets.add(targetName);
+        const ref = className ?? targetName;
         Logger.warn(
             `Ingress client used inside a Restate handler for '${targetName}'. ` +
                 `This makes a regular HTTP call and bypasses durable execution. ` +
-                `Use @InjectClient(${targetName}) for durable RPC instead.`,
+                `Use @InjectClient(${ref}) for durable RPC instead.`,
             "RestateIngress",
         );
     }
@@ -182,12 +183,13 @@ export function createRestateIngress(sdkIngress: SdkIngress): Ingress {
                     const meta = getComponentMeta(firstArg);
                     const expectedType = EXPECTED_COMPONENT_TYPE[prop];
                     if (meta.type !== expectedType) {
+                        const a = (w: string) => (w === "object" ? "an" : "a");
                         throw new Error(
-                            `Method '${prop}' expects a ${expectedType} component, ` +
-                                `but '${meta.name}' is a ${meta.type} component.`,
+                            `Method '${prop}' expects ${a(expectedType)} ${expectedType} component, ` +
+                                `but '${meta.name}' is ${a(meta.type)} ${meta.type} component.`,
                         );
                     }
-                    warnIfInsideHandler(meta.name);
+                    warnIfInsideHandler(meta.name, firstArg.name);
                     args[0] = { name: meta.name };
                 }
                 return target[prop](...args);

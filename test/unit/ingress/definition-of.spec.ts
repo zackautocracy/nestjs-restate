@@ -55,4 +55,30 @@ describe("definitionOf utilities", () => {
             expect(def).toEqual({ name: "order" });
         });
     });
+
+    describe("type mismatch validation", () => {
+        it("serviceDefinitionOf rejects @VirtualObject class", () => {
+            expect(() => serviceDefinitionOf(CartObject as any)).toThrow(
+                /serviceDefinitionOf\(\) expects a @Service\(\) class, but 'cart' is an object component/,
+            );
+        });
+
+        it("serviceDefinitionOf rejects @Workflow class", () => {
+            expect(() => serviceDefinitionOf(OrderWorkflow as any)).toThrow(
+                /serviceDefinitionOf\(\) expects a @Service\(\) class, but 'order' is a workflow component/,
+            );
+        });
+
+        it("objectDefinitionOf rejects @Service class", () => {
+            expect(() => objectDefinitionOf(PaymentService as any)).toThrow(
+                /objectDefinitionOf\(\) expects a @VirtualObject\(\) class, but 'payment' is a service component/,
+            );
+        });
+
+        it("workflowDefinitionOf rejects @Service class", () => {
+            expect(() => workflowDefinitionOf(PaymentService as any)).toThrow(
+                /workflowDefinitionOf\(\) expects a @Workflow\(\) class, but 'payment' is a service component/,
+            );
+        });
+    });
 });

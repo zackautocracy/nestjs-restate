@@ -94,5 +94,29 @@ describe("component-metadata", () => {
                 /has no Restate component decorator/,
             );
         });
+
+        it("should throw for null", () => {
+            expect(() => getComponentMeta(null)).toThrow(
+                /Expected a class constructor, but received null/,
+            );
+        });
+
+        it("should throw for undefined", () => {
+            expect(() => getComponentMeta(undefined)).toThrow(
+                /Expected a class constructor, but received undefined/,
+            );
+        });
+
+        it("should throw for a plain object", () => {
+            expect(() => getComponentMeta({ name: "foo" })).toThrow(
+                /Expected a class constructor, but received object/,
+            );
+        });
+
+        it("should throw for a string", () => {
+            expect(() => getComponentMeta("hello")).toThrow(
+                /Expected a class constructor, but received string/,
+            );
+        });
     });
 });

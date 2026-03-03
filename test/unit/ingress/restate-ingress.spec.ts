@@ -153,6 +153,11 @@ describe("createRestateIngress", () => {
                 expect.stringContaining("Ingress client used inside a Restate handler"),
                 "RestateIngress",
             );
+            // Should reference the class name, not just the service name
+            expect(warnSpy).toHaveBeenCalledWith(
+                expect.stringContaining(`@InjectClient(${PaymentService.name})`),
+                "RestateIngress",
+            );
 
             warnSpy.mockRestore();
         });
@@ -190,13 +195,13 @@ describe("createRestateIngress", () => {
 
         it("should throw when passing @Service class to objectClient", () => {
             expect(() => ingress.objectClient(PaymentService as any, "key")).toThrow(
-                "Method 'objectClient' expects a object component, but 'payment' is a service component.",
+                "Method 'objectClient' expects an object component, but 'payment' is a service component.",
             );
         });
 
         it("should throw when passing @VirtualObject class to workflowClient", () => {
             expect(() => ingress.workflowClient(CartObject as any, "key")).toThrow(
-                "Method 'workflowClient' expects a workflow component, but 'cart' is a object component.",
+                "Method 'workflowClient' expects a workflow component, but 'cart' is an object component.",
             );
         });
 
@@ -208,7 +213,7 @@ describe("createRestateIngress", () => {
 
         it("should throw when passing @Service class to objectSendClient", () => {
             expect(() => ingress.objectSendClient(PaymentService as any, "key")).toThrow(
-                "Method 'objectSendClient' expects a object component, but 'payment' is a service component.",
+                "Method 'objectSendClient' expects an object component, but 'payment' is a service component.",
             );
         });
     });

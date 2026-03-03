@@ -270,9 +270,9 @@ export class ApiController {
 }
 ```
 
-The `Ingress` type is re-exported from `nestjs-restate` — it accepts decorated classes alongside raw SDK definitions.
+The `Ingress` type is re-exported from `nestjs-restate` — pass your decorated classes directly, no manual SDK definitions needed.
 
-If you need a raw SDK-compatible definition (e.g., for use with the SDK directly), use the `definitionOf` utilities:
+If you need a raw SDK-compatible definition (e.g., for use with the SDK's own `Ingress` directly), use the `definitionOf` utilities:
 
 ```typescript
 import { serviceDefinitionOf, objectDefinitionOf, workflowDefinitionOf } from 'nestjs-restate';

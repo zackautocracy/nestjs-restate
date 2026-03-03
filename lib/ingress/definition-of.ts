@@ -1,6 +1,8 @@
 import { getComponentMeta } from "../registry/component-metadata";
 import type { Constructor } from "./restate-ingress";
 
+const article = (w: string) => (w === "object" ? "an" : "a");
+
 // ── Factory Functions ──
 
 /**
@@ -16,8 +18,13 @@ import type { Constructor } from "./restate-ingress";
  * ```
  */
 export function serviceDefinitionOf<T>(target: Constructor<T>): { name: string } {
-    const { name } = getComponentMeta(target);
-    return { name };
+    const meta = getComponentMeta(target);
+    if (meta.type !== "service") {
+        throw new Error(
+            `serviceDefinitionOf() expects a @Service() class, but '${meta.name}' is ${article(meta.type)} ${meta.type} component.`,
+        );
+    }
+    return { name: meta.name };
 }
 
 /**
@@ -30,8 +37,13 @@ export function serviceDefinitionOf<T>(target: Constructor<T>): { name: string }
  * ```
  */
 export function objectDefinitionOf<T>(target: Constructor<T>): { name: string } {
-    const { name } = getComponentMeta(target);
-    return { name };
+    const meta = getComponentMeta(target);
+    if (meta.type !== "object") {
+        throw new Error(
+            `objectDefinitionOf() expects a @VirtualObject() class, but '${meta.name}' is ${article(meta.type)} ${meta.type} component.`,
+        );
+    }
+    return { name: meta.name };
 }
 
 /**
@@ -44,6 +56,11 @@ export function objectDefinitionOf<T>(target: Constructor<T>): { name: string } 
  * ```
  */
 export function workflowDefinitionOf<T>(target: Constructor<T>): { name: string } {
-    const { name } = getComponentMeta(target);
-    return { name };
+    const meta = getComponentMeta(target);
+    if (meta.type !== "workflow") {
+        throw new Error(
+            `workflowDefinitionOf() expects a @Workflow() class, but '${meta.name}' is ${article(meta.type)} ${meta.type} component.`,
+        );
+    }
+    return { name: meta.name };
 }
