@@ -27,7 +27,7 @@ type NestLifecycleMethods =
  * Filter to only public async methods, excluding NestJS lifecycle hooks.
  * Redefined here (also exists in client-proxy.ts) to avoid circular dependencies.
  */
-export type HandlerMethods<T> = {
+type HandlerMethods<T> = {
     [K in keyof T as K extends NestLifecycleMethods
         ? never
         : T[K] extends (...args: any[]) => Promise<any>
