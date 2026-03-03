@@ -1,22 +1,6 @@
 import { getComponentMeta } from "../registry/component-metadata";
 import type { Constructor } from "./restate-ingress";
 
-// ── Handler Map Types (add synthetic ctx for SDK compatibility) ──
-
-/** Transforms class methods to SDK handler shape: adds ctx as first param. */
-type HandlerMethods<T> = {
-    [K in keyof T as T[K] extends (...args: any[]) => Promise<any> ? K : never]: T[K];
-};
-
-type ServiceHandlerMap<T> = {
-    [K in keyof HandlerMethods<T>]: T[K] extends (...args: infer P) => Promise<infer O>
-        ? (ctx: any, ...args: P) => Promise<O>
-        : never;
-};
-
-type ObjectHandlerMap<T> = ServiceHandlerMap<T>;
-type WorkflowHandlerMap<T> = ServiceHandlerMap<T>;
-
 // ── Factory Functions ──
 
 /**

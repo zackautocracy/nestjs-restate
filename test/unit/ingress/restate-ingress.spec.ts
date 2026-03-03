@@ -77,7 +77,7 @@ describe("createRestateIngress", () => {
 
     describe("class-based objectClient", () => {
         it("should accept a @VirtualObject class + key and pass { name } + key to SDK", () => {
-            const client = ingress.objectClient(CartObject, "user-1");
+            ingress.objectClient(CartObject, "user-1");
 
             expect(mockSdk.objectClient).toHaveBeenCalledWith({ name: "cart" }, "user-1");
         });
@@ -85,7 +85,7 @@ describe("createRestateIngress", () => {
 
     describe("class-based workflowClient", () => {
         it("should accept a @Workflow class + key and pass { name } + key to SDK", () => {
-            const client = ingress.workflowClient(OrderWorkflow, "order-1");
+            ingress.workflowClient(OrderWorkflow, "order-1");
 
             expect(mockSdk.workflowClient).toHaveBeenCalledWith({ name: "order" }, "order-1");
         });
@@ -93,7 +93,7 @@ describe("createRestateIngress", () => {
 
     describe("class-based serviceSendClient", () => {
         it("should accept a @Service class for fire-and-forget", () => {
-            const client = ingress.serviceSendClient(PaymentService);
+            ingress.serviceSendClient(PaymentService);
 
             expect(mockSdk.serviceSendClient).toHaveBeenCalledWith({
                 name: "payment",
@@ -103,7 +103,7 @@ describe("createRestateIngress", () => {
 
     describe("class-based objectSendClient", () => {
         it("should accept a @VirtualObject class + key for fire-and-forget", () => {
-            const client = ingress.objectSendClient(CartObject, "user-1");
+            ingress.objectSendClient(CartObject, "user-1");
 
             expect(mockSdk.objectSendClient).toHaveBeenCalledWith({ name: "cart" }, "user-1");
         });
