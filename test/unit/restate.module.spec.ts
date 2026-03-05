@@ -14,6 +14,7 @@ import { RestateContext } from "nestjs-restate/context/restate-context";
 import { RestateEndpointManager } from "nestjs-restate/endpoint/restate.endpoint";
 import { getClientToken } from "nestjs-restate/proxy/client-token";
 import { RESTATE_OPTIONS } from "nestjs-restate/restate.constants";
+import { computeInterfaceHash } from "nestjs-restate/restate.module";
 
 describe("RestateModule", () => {
     describe("forRoot", () => {
@@ -234,6 +235,315 @@ describe("RestateModule", () => {
             expect(fetchSpy).not.toHaveBeenCalled();
 
             await app.close();
+        });
+
+        it("should send force: false in production mode by default", async () => {
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            mode: "production",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            // First call is GET pre-check, second is POST
+            const postCall = fetchSpy.mock.calls.find((c: any[]) => c[1]?.method === "POST");
+            expect(postCall).toBeDefined();
+            const body = JSON.parse(postCall?.[1].body);
+            expect(body.force).toBe(false);
+
+            await app.close();
+        });
+
+        it("should allow explicit force: true to override production mode", async () => {
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            mode: "production",
+                            force: true,
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const postCall = fetchSpy.mock.calls.find((c: any[]) => c[1]?.method === "POST");
+            expect(postCall).toBeDefined();
+            const body = JSON.parse(postCall?.[1].body);
+            expect(body.force).toBe(true);
+
+            await app.close();
+        });
+
+        it("should send custom metadata in POST body", async () => {
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            metadata: { version: "1.2.0", commit: "abc1234" },
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+            expect(body.metadata).toBeDefined();
+            expect(body.metadata["nestjs-restate.interface-hash"]).toMatch(/^sha256:/);
+            expect(body.metadata.version).toBe("1.2.0");
+            expect(body.metadata.commit).toBe("abc1234");
+
+            await app.close();
+        });
+
+        it("should skip POST when production mode GET finds matching hash", async () => {
+            // Compute the expected hash for a single service with one handler
+            const expectedHash = computeInterfaceHash([
+                {
+                    componentName: "test-svc",
+                    componentType: "service",
+                    handlers: [{ name: "handle", type: "handler" }],
+                },
+            ]);
+
+            fetchSpy.mockImplementation(async (url: string, opts?: any) => {
+                if (!opts || opts.method !== "POST") {
+                    // GET /deployments
+                    return {
+                        ok: true,
+                        status: 200,
+                        json: () =>
+                            Promise.resolve({
+                                deployments: [
+                                    {
+                                        uri: "http://my-host:9080",
+                                        metadata: {
+                                            "nestjs-restate.interface-hash": expectedHash,
+                                        },
+                                    },
+                                ],
+                            }),
+                    };
+                }
+                return {
+                    ok: true,
+                    status: 201,
+                    text: () => Promise.resolve(""),
+                };
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            mode: "production",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            // Should have only the GET, no POST
+            const postCalls = fetchSpy.mock.calls.filter((c: any[]) => c[1]?.method === "POST");
+            expect(postCalls).toHaveLength(0);
+
+            await app.close();
+        });
+
+        it("should fall through to POST when production mode GET fails", async () => {
+            fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+                if (!opts || opts.method !== "POST") {
+                    // GET /deployments fails
+                    throw new Error("connection refused");
+                }
+                return {
+                    ok: true,
+                    status: 201,
+                    text: () => Promise.resolve(""),
+                };
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            mode: "production",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            // Should have called POST despite GET failure
+            const postCalls = fetchSpy.mock.calls.filter((c: any[]) => c[1]?.method === "POST");
+            expect(postCalls).toHaveLength(1);
+
+            await app.close();
+        });
+
+        it("should log different messages for 201 vs 200 status", async () => {
+            const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+            // Test 201 response
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module1 = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app1 = module1.createNestApplication();
+            await app1.init();
+
+            const logCalls201 = stdoutSpy.mock.calls
+                .map((c) => String(c[0]))
+                .filter((s) => s.includes("New deployment registered"));
+            expect(logCalls201.length).toBeGreaterThan(0);
+
+            await app1.close();
+
+            stdoutSpy.mockClear();
+
+            // Test 200 response
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 200,
+                text: () => Promise.resolve(""),
+            });
+
+            const module2 = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app2 = module2.createNestApplication();
+            await app2.init();
+
+            const logCalls200 = stdoutSpy.mock.calls
+                .map((c) => String(c[0]))
+                .filter((s) => s.includes("already registered"));
+            expect(logCalls200.length).toBeGreaterThan(0);
+
+            await app2.close();
+            stdoutSpy.mockRestore();
+        });
+
+        it("should log warning on 409 conflict", async () => {
+            const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+            const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+            fetchSpy.mockResolvedValue({
+                ok: false,
+                status: 409,
+                text: () => Promise.resolve("conflict"),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const allOutput = [
+                ...stderrSpy.mock.calls.map((c) => String(c[0])),
+                ...stdoutSpy.mock.calls.map((c) => String(c[0])),
+            ];
+            const conflictLogs = allOutput.filter((s) => s.includes("Deployment conflict"));
+            expect(conflictLogs.length).toBeGreaterThan(0);
+
+            await app.close();
+            stderrSpy.mockRestore();
+            stdoutSpy.mockRestore();
         });
     });
 

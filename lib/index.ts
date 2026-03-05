@@ -57,7 +57,7 @@ export {
     Workflow,
 } from "./decorators";
 // Discovery
-export type { DiscoveryResult } from "./discovery/restate.explorer";
+export type { ComponentSummary, DiscoveryResult } from "./discovery/restate.explorer";
 // Definition utilities
 export {
     objectDefinitionOf,
@@ -90,10 +90,8 @@ export { getClientToken } from "./proxy/client-token";
 // Component metadata (shared utility)
 export type { ComponentMeta } from "./registry/component-metadata";
 export { getComponentMeta, isRestateComponent } from "./registry/component-metadata";
-
 // Constants (for advanced usage)
 export { RESTATE_CLIENT } from "./restate.constants";
-
 // Types
 export type {
     AnyHandlerOpts,
@@ -112,6 +110,6 @@ export type {
     WorkflowComponentMetadata,
     WorkflowDecoratorOptions,
 } from "./restate.interfaces";
-
+// Hash utility
 // Module
-export { RestateModule } from "./restate.module";
+export { computeInterfaceHash, RestateModule } from "./restate.module";

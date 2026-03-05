@@ -15,9 +15,16 @@ import type {
     ResolvedWorkflowComponentMetadata,
 } from "../restate.interfaces";
 
+export interface ComponentSummary {
+    componentName: string;
+    componentType: string;
+    handlers: Array<{ name: string; type: string }>;
+}
+
 export interface DiscoveryResult {
     definitions: any[];
     serviceClassNames: Map<string, string>;
+    componentSummary: ComponentSummary[];
 }
 
 @Injectable()
@@ -34,6 +41,7 @@ export class RestateExplorer {
     discover(): DiscoveryResult {
         const definitions: any[] = [];
         const serviceClassNames = new Map<string, string>();
+        const componentSummary: ComponentSummary[] = [];
         const providers = this.discoveryService.getProviders();
 
         for (const wrapper of providers) {
@@ -53,17 +61,41 @@ export class RestateExplorer {
             if (workflowMeta) {
                 serviceClassNames.set(workflowMeta.name, instance.constructor.name);
                 definitions.push(this.buildWorkflow(instance, workflowMeta));
+                const handlers = this.getHandlerMetadata(instance);
+                componentSummary.push({
+                    componentName: workflowMeta.name,
+                    componentType: "workflow",
+                    handlers: handlers.map((h) => ({ name: h.methodName, type: h.type })),
+                });
             } else if (serviceMeta) {
                 serviceClassNames.set(serviceMeta.name, instance.constructor.name);
                 definitions.push(this.buildService(instance, serviceMeta));
+                const handlers = this.getHandlerMetadata(instance);
+                componentSummary.push({
+                    componentName: serviceMeta.name,
+                    componentType: "service",
+                    handlers: handlers.map((h) => ({ name: h.methodName, type: h.type })),
+                });
             } else if (virtualObjectMeta) {
                 serviceClassNames.set(virtualObjectMeta.name, instance.constructor.name);
                 definitions.push(this.buildVirtualObject(instance, virtualObjectMeta));
+                const handlers = this.getHandlerMetadata(instance);
+                componentSummary.push({
+                    componentName: virtualObjectMeta.name,
+                    componentType: "virtualObject",
+                    handlers: handlers.map((h) => ({ name: h.methodName, type: h.type })),
+                });
             }
         }
 
+        // Sort component summary deterministically
+        componentSummary.sort((a, b) => a.componentName.localeCompare(b.componentName));
+        for (const cs of componentSummary) {
+            cs.handlers.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
         this.logger.log(`Discovered ${definitions.length} Restate component(s)`);
-        return { definitions, serviceClassNames };
+        return { definitions, serviceClassNames, componentSummary };
     }
 
     private buildWorkflow(instance: any, meta: ResolvedWorkflowComponentMetadata) {
