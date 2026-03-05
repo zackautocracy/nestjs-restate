@@ -164,7 +164,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 const getUrl = `${admin}/deployments`;
                 const getResponse = await fetch(getUrl);
                 if (getResponse.ok) {
-                    const data = await getResponse.json();
+                    const data: any = await getResponse.json();
                     const deployments = data.deployments ?? data;
                     const existing = Array.isArray(deployments)
                         ? deployments.find(
@@ -187,7 +187,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 }
             } catch {
                 // GET failed — fall through to POST
-                RestateModule.logger.debug?.(
+                RestateModule.logger.debug(
                     `Pre-check GET /deployments failed, falling through to POST`,
                 );
             }
@@ -216,8 +216,9 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                     `Deployment already registered at ${admin} (URI: ${deploymentUrl}), no changes detected`,
                 );
             } else if (response.status === 409) {
+                const text = await response.text();
                 RestateModule.logger.warn(
-                    `Deployment conflict at ${admin} — interface changed. Use a new deployment URL or set force: true.`,
+                    `Deployment conflict at ${admin} — interface changed. Use a new deployment URL or set force: true. ${text}`.trim(),
                 );
             } else {
                 const text = await response.text();

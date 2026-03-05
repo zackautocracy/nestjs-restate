@@ -110,6 +110,5 @@ export type {
     WorkflowComponentMetadata,
     WorkflowDecoratorOptions,
 } from "./restate.interfaces";
-// Hash utility
-// Module
+// Module & utilities
 export { computeInterfaceHash, RestateModule } from "./restate.module";
