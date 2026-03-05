@@ -128,7 +128,7 @@ Restate has three component types. Each is defined as a regular NestJS class wit
 
 ### Services
 
-Stateless durable handlers. Each call is retried automatically on failure and runs exactly once to completion. Use services for side effects like sending emails, charging payments, or calling external APIs.
+Stateless durable handlers. Handlers are durable — if the service crashes mid-execution, Restate automatically retries from the last checkpoint, not from the beginning. Use services for side effects like sending emails, charging payments, or calling external APIs.
 
 ```typescript
 import { Service, Handler, RestateContext } from 'nestjs-restate';
@@ -180,7 +180,7 @@ Use virtual objects for: shopping carts, user sessions, chat rooms, rate limiter
 
 ### Workflows
 
-Long-running durable processes that execute exactly once per key. A workflow has one `@Run()` entry point and can receive external signals via `@Signal()` handlers while it runs.
+Long-running durable processes with a unique execution per key. A workflow has one `@Run()` entry point and can receive external signals via `@Signal()` handlers while it runs.
 
 ```typescript
 import { Workflow, Run, Signal, Shared, RestateContext, TerminalError } from 'nestjs-restate';
@@ -228,6 +228,8 @@ Use workflows for: user onboarding, approval flows, order fulfillment, or any mu
 **Key rules:**
 - Exactly **one** `@Run()` per workflow — the method **must** be named `run`
 - `@Signal()` methods can be called concurrently while the workflow is running
+
+> **`@Signal()` vs `@Shared()` on workflows:** Both are concurrent handlers in the Restate SDK. Use `@Signal()` for methods that receive external input (resolving promises), and `@Shared()` for read-only queries (checking status). The distinction is semantic — they compile to the same handler type.
 - Use `this.ctx.promise()` for durable signals between run and signal handlers
 
 ### Mental Model

@@ -62,7 +62,7 @@ Three proxy types: `ServiceClient<T>`, `ObjectClient<T>` (`.key()`), `WorkflowCl
 
 ## Workflow Signals
 
-`@Shared()` on workflows → `@Signal()`. `@Shared()` is now exclusively for virtual object concurrent handlers.
+`@Shared()` handlers on workflows are now reserved for concurrent read operations (e.g., status queries). Use `@Signal()` for handlers that receive external events and resolve workflow promises. Both decorators are valid on workflows and map to the same SDK handler type (`workflow.shared`), but communicate different intent.
 
 ```diff
 -import { Workflow, Run, Shared } from 'nestjs-restate';
@@ -88,7 +88,7 @@ Three proxy types: `ServiceClient<T>`, `ObjectClient<T>` (`.key()`), `WorkflowCl
 - [ ] Update `@restatedev/restate-sdk-clients` to `>=1.8.0`
 - [ ] Add `RestateContext` to constructor of all handler classes
 - [ ] Remove `ctx` parameter from all handler methods — use `this.ctx`
-- [ ] Replace `@Shared()` → `@Signal()` on `@Workflow` classes
+- [ ] Rename `@Shared()` → `@Signal()` on workflow handlers that resolve promises; keep `@Shared()` for read-only query handlers
 - [ ] Replace manual `serviceClient()` with `@InjectClient(T)` typed proxies
 - [ ] Update error imports to use `nestjs-restate` (optional but recommended)
 - [ ] Run tests to verify everything works
