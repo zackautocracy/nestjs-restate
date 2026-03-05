@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
     type DynamicModule,
     Global,
@@ -11,6 +12,7 @@ import {
 import { DiscoveryModule } from "@nestjs/core";
 import * as clients from "@restatedev/restate-sdk-clients";
 import { RestateContext } from "./context/restate-context";
+import type { ComponentSummary } from "./discovery/restate.explorer";
 import { RestateExplorer } from "./discovery/restate.explorer";
 import { RestateEndpointManager } from "./endpoint/restate.endpoint";
 import { createRestateIngress } from "./ingress/restate-ingress";
@@ -21,10 +23,23 @@ import { getRegisteredComponents } from "./registry/component-registry";
 import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants";
 import type { RestateModuleAsyncOptions, RestateModuleOptions } from "./restate.interfaces";
 
+export function computeInterfaceHash(summary: ComponentSummary[]): string {
+    const sorted = [...summary]
+        .sort((a, b) => a.componentName.localeCompare(b.componentName))
+        .map((c) => ({
+            ...c,
+            handlers: [...c.handlers].sort((a, b) => a.name.localeCompare(b.name)),
+        }));
+    const json = JSON.stringify(sorted);
+    const hash = createHash("sha256").update(json).digest("hex");
+    return `sha256:${hash}`;
+}
+
 @Global()
 @Module({})
 export class RestateModule implements OnModuleInit, OnModuleDestroy {
     private static readonly logger = new Logger(RestateModule.name);
+    private componentSummary: ComponentSummary[] = [];
 
     constructor(
         private readonly explorer: RestateExplorer,
@@ -91,7 +106,8 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit(): Promise<void> {
         Logger.overrideLogger(new RestateLoggerService());
-        const { definitions, serviceClassNames } = this.explorer.discover();
+        const { definitions, serviceClassNames, componentSummary } = this.explorer.discover();
+        this.componentSummary = componentSummary;
 
         for (const def of definitions) {
             this.endpointManager.addDefinition(def);
@@ -132,12 +148,57 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         }
 
         const deploymentUrl = autoRegister.deploymentUrl.replace("{{port}}", String(listeningPort));
+        const mode = autoRegister.mode ?? "development";
+        const effectiveForce =
+            autoRegister.force !== undefined ? autoRegister.force : mode !== "production";
+
+        const hash = computeInterfaceHash(this.componentSummary);
+        const metadata: Record<string, string> = {
+            "nestjs-restate.interface-hash": hash,
+            ...autoRegister.metadata,
+        };
+
+        // Production mode pre-check: skip POST if deployment already registered with same hash
+        if (mode === "production") {
+            try {
+                const getUrl = `${admin}/deployments`;
+                const getResponse = await fetch(getUrl);
+                if (getResponse.ok) {
+                    const data = await getResponse.json();
+                    const deployments = data.deployments ?? data;
+                    const existing = Array.isArray(deployments)
+                        ? deployments.find(
+                              (d: any) =>
+                                  d.uri === deploymentUrl ||
+                                  d.deployment?.uri === deploymentUrl ||
+                                  d.endpoint?.uri === deploymentUrl,
+                          )
+                        : undefined;
+                    const existingMeta =
+                        existing?.metadata ??
+                        existing?.deployment?.metadata ??
+                        existing?.endpoint?.metadata;
+                    if (existing && existingMeta?.["nestjs-restate.interface-hash"] === hash) {
+                        RestateModule.logger.log(
+                            `Deployment already registered at ${admin} (URI: ${deploymentUrl}), no changes detected`,
+                        );
+                        return;
+                    }
+                }
+            } catch {
+                // GET failed — fall through to POST
+                RestateModule.logger.debug?.(
+                    `Pre-check GET /deployments failed, falling through to POST`,
+                );
+            }
+        }
 
         try {
             const url = `${admin}/deployments`;
             const body = JSON.stringify({
                 uri: deploymentUrl,
-                force: autoRegister.force ?? true,
+                force: effectiveForce,
+                metadata,
             });
 
             const response = await fetch(url, {
@@ -146,9 +207,17 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 body,
             });
 
-            if (response.ok) {
+            if (response.status === 201) {
                 RestateModule.logger.log(
-                    `Deployment auto-registered at ${admin} with URI ${deploymentUrl}`,
+                    `New deployment registered at ${admin} (URI: ${deploymentUrl})`,
+                );
+            } else if (response.status === 200) {
+                RestateModule.logger.log(
+                    `Deployment already registered at ${admin} (URI: ${deploymentUrl}), no changes detected`,
+                );
+            } else if (response.status === 409) {
+                RestateModule.logger.warn(
+                    `Deployment conflict at ${admin} — interface changed. Use a new deployment URL or set force: true.`,
                 );
             } else {
                 const text = await response.text();

@@ -36,8 +36,24 @@ export interface AutoRegisterOptions {
     /** Full URL where Restate server can reach this service endpoint.
      *  Supports `{{port}}` placeholder for random port scenarios (port: 0). */
     deploymentUrl: string;
-    /** Force-overwrite existing deployments (default: true) */
+    /**
+     * Registration mode:
+     * - `'development'` (default): Uses `force: true` for fast iteration. Overwrites existing deployments.
+     * - `'production'`: Uses `force: false`. If the deployment already exists unchanged, skips re-registration.
+     *   If the interface changed, logs a warning suggesting immutable deployment URLs.
+     */
+    mode?: "development" | "production";
+    /**
+     * Force-overwrite existing deployments. Overrides the mode default.
+     * Only use this if you understand the implications for in-flight invocations.
+     */
     force?: boolean;
+    /**
+     * Custom metadata attached to the deployment registration.
+     * Useful for version tags, commit hashes, or environment labels.
+     * @example { version: '1.2.0', commit: 'abc1234' }
+     */
+    metadata?: Record<string, string>;
 }
 
 export interface RestateErrorOptions {
