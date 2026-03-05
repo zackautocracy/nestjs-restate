@@ -581,5 +581,33 @@ describe("RestateExplorer", () => {
 
             expect(() => explorer.discover()).toThrow(/must be named 'run', found 'execute'/);
         });
+
+        it("should accept @Shared() on a workflow for read-only query handlers", () => {
+            @Workflow("shared-workflow")
+            class SharedWorkflow {
+                @Run()
+                async run() {
+                    return "done";
+                }
+
+                @Signal()
+                async confirm(code: string) {
+                    /* resolves promise */
+                }
+
+                @Shared()
+                async status() {
+                    return "pending";
+                }
+            }
+
+            const instance = new SharedWorkflow();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const { definitions } = explorer.discover();
+
+            expect(definitions).toHaveLength(1);
+            expect(definitions[0].name).toBe("shared-workflow");
+        });
     });
 });
