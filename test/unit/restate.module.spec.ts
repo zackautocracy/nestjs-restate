@@ -161,6 +161,8 @@ describe("RestateModule", () => {
             const body = JSON.parse(options.body);
             expect(body.uri).toBe("http://my-host:9080");
             expect(body.force).toBe(true);
+            expect(body.metadata).toBeDefined();
+            expect(body.metadata["nestjs-restate.interface-hash"]).toMatch(/^sha256:/);
 
             await app.close();
         });
@@ -238,10 +240,20 @@ describe("RestateModule", () => {
         });
 
         it("should send force: false in production mode by default", async () => {
-            fetchSpy.mockResolvedValue({
-                ok: true,
-                status: 201,
-                text: () => Promise.resolve(""),
+            fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+                if (!opts || opts.method !== "POST") {
+                    // GET /deployments — no matching deployment
+                    return {
+                        ok: true,
+                        status: 200,
+                        json: () => Promise.resolve({ deployments: [] }),
+                    };
+                }
+                return {
+                    ok: true,
+                    status: 201,
+                    text: () => Promise.resolve(""),
+                };
             });
 
             const module = await Test.createTestingModule({
@@ -272,10 +284,20 @@ describe("RestateModule", () => {
         });
 
         it("should allow explicit force: true to override production mode", async () => {
-            fetchSpy.mockResolvedValue({
-                ok: true,
-                status: 201,
-                text: () => Promise.resolve(""),
+            fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+                if (!opts || opts.method !== "POST") {
+                    // GET /deployments — no matching deployment
+                    return {
+                        ok: true,
+                        status: 200,
+                        json: () => Promise.resolve({ deployments: [] }),
+                    };
+                }
+                return {
+                    ok: true,
+                    status: 201,
+                    text: () => Promise.resolve(""),
+                };
             });
 
             const module = await Test.createTestingModule({
