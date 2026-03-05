@@ -545,7 +545,14 @@ endpoint: { type: 'lambda' }       // AWS Lambda (no server)
 
 ### Component-Level Options
 
-Decorators accept either a string name or an options object for fine-grained SDK configuration:
+Decorators accept a string name, an options object, or nothing at all — omitting the name defaults it to the class name:
+
+```typescript
+@Service()                          // name → 'PaymentService'
+export class PaymentService { ... }
+```
+
+For fine-grained SDK configuration, pass an options object:
 
 ```typescript
 @Service({
@@ -614,6 +621,25 @@ endpoint: { port: 0 },
 autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
 ```
 
+#### Registration Mode
+
+By default, auto-registration uses `force: true` (development mode) — every restart overwrites the existing deployment. For production, use `mode: 'production'` to skip registration when the interface hasn't changed:
+
+```typescript
+autoRegister: {
+    deploymentUrl: 'http://my-service.default:9080',
+    mode: 'production',        // GET pre-check + hash comparison
+    metadata: { version: '2.1.0' },  // custom metadata sent with deployment
+},
+```
+
+| Mode | Behavior |
+|---|---|
+| `'development'` (default) | Always registers with `force: true` — safe for local dev |
+| `'production'` | Computes a SHA-256 hash of the service interface. If the deployment already exists with the same hash, registration is skipped entirely — zero unnecessary writes to Restate. |
+
+The hash is stored as `nestjs-restate.interface-hash` in the deployment metadata and can be inspected via the Restate admin API.
+
 ## API Reference
 
 ### Decorators
@@ -622,9 +648,9 @@ All class decorators implicitly apply `@Injectable()`.
 
 | Decorator | Description |
 |---|---|
-| `@Service(name)` | [Restate Service](https://docs.restate.dev/develop/ts/services) — stateless durable handlers |
-| `@VirtualObject(name)` | [Restate Virtual Object](https://docs.restate.dev/develop/ts/services#virtual-objects) — keyed stateful handlers |
-| `@Workflow(name)` | [Restate Workflow](https://docs.restate.dev/develop/ts/services#workflows) — long-running durable process |
+| `@Service(name?)` | [Restate Service](https://docs.restate.dev/develop/ts/services) — stateless durable handlers. Name defaults to the class name when omitted. |
+| `@VirtualObject(name?)` | [Restate Virtual Object](https://docs.restate.dev/develop/ts/services#virtual-objects) — keyed stateful handlers. Name defaults to the class name when omitted. |
+| `@Workflow(name?)` | [Restate Workflow](https://docs.restate.dev/develop/ts/services#workflows) — long-running durable process. Name defaults to the class name when omitted. |
 | `@Handler()` | Handler method on `@Service`, or exclusive handler on `@VirtualObject` |
 | `@Shared()` | Concurrent handler on `@VirtualObject` (for reads that can run in parallel) |
 | `@Signal()` | Signal handler on `@Workflow` (receives external signals while the workflow runs) |
