@@ -88,7 +88,7 @@ export interface HandlerMetadata {
 // ── Component metadata ──
 
 export interface ServiceComponentMetadata {
-    name: string;
+    name?: string;
     /** Human-readable description shown in admin tools */
     description?: string;
     /** Key/value metadata exposed via the Admin API */
@@ -98,7 +98,7 @@ export interface ServiceComponentMetadata {
 }
 
 export interface VirtualObjectComponentMetadata {
-    name: string;
+    name?: string;
     /** Human-readable description shown in admin tools */
     description?: string;
     /** Key/value metadata exposed via the Admin API */
@@ -108,13 +108,25 @@ export interface VirtualObjectComponentMetadata {
 }
 
 export interface WorkflowComponentMetadata {
-    name: string;
+    name?: string;
     /** Human-readable description shown in admin tools */
     description?: string;
     /** Key/value metadata exposed via the Admin API */
     metadata?: Record<string, string>;
     /** Workflow SDK options (retryPolicy, timeouts, workflowRetention, etc.) */
     options?: WorkflowOptions;
+}
+
+// ── Resolved metadata types (name guaranteed after decoration) ──
+
+export interface ResolvedServiceComponentMetadata extends ServiceComponentMetadata {
+    name: string;
+}
+export interface ResolvedVirtualObjectComponentMetadata extends VirtualObjectComponentMetadata {
+    name: string;
+}
+export interface ResolvedWorkflowComponentMetadata extends WorkflowComponentMetadata {
+    name: string;
 }
 
 // ── Decorator option types (string | object for backward compat) ──

@@ -10,9 +10,9 @@ import {
 } from "../restate.constants";
 import type {
     HandlerMetadata,
-    ServiceComponentMetadata,
-    VirtualObjectComponentMetadata,
-    WorkflowComponentMetadata,
+    ResolvedServiceComponentMetadata,
+    ResolvedVirtualObjectComponentMetadata,
+    ResolvedWorkflowComponentMetadata,
 } from "../restate.interfaces";
 
 @Injectable()
@@ -35,13 +35,13 @@ export class RestateExplorer {
             if (!instance || !metatype) continue;
 
             const workflowMeta = Reflect.getMetadata(WORKFLOW_METADATA_KEY, metatype) as
-                | WorkflowComponentMetadata
+                | ResolvedWorkflowComponentMetadata
                 | undefined;
             const serviceMeta = Reflect.getMetadata(SERVICE_METADATA_KEY, metatype) as
-                | ServiceComponentMetadata
+                | ResolvedServiceComponentMetadata
                 | undefined;
             const virtualObjectMeta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, metatype) as
-                | VirtualObjectComponentMetadata
+                | ResolvedVirtualObjectComponentMetadata
                 | undefined;
 
             if (workflowMeta) {
@@ -57,7 +57,7 @@ export class RestateExplorer {
         return definitions;
     }
 
-    private buildWorkflow(instance: any, meta: WorkflowComponentMetadata) {
+    private buildWorkflow(instance: any, meta: ResolvedWorkflowComponentMetadata) {
         const handlers = this.getHandlerMetadata(instance);
         const runHandlers = handlers.filter((h) => h.type === "run");
         const sharedHandlers = handlers.filter((h) => h.type === "shared");
@@ -104,7 +104,7 @@ export class RestateExplorer {
         });
     }
 
-    private buildService(instance: any, meta: ServiceComponentMetadata) {
+    private buildService(instance: any, meta: ResolvedServiceComponentMetadata) {
         const handlers = this.getHandlerMetadata(instance);
         const handlerMethods = handlers.filter((h) => h.type === "handler");
 
@@ -134,7 +134,7 @@ export class RestateExplorer {
         });
     }
 
-    private buildVirtualObject(instance: any, meta: VirtualObjectComponentMetadata) {
+    private buildVirtualObject(instance: any, meta: ResolvedVirtualObjectComponentMetadata) {
         const handlers = this.getHandlerMetadata(instance);
         const exclusiveHandlers = handlers.filter((h) => h.type === "handler");
         const sharedHandlers = handlers.filter((h) => h.type === "shared");

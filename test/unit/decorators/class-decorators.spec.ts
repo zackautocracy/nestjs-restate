@@ -16,6 +16,14 @@ describe("Class Decorators", () => {
             expect(meta).toEqual({ name: "my-workflow" });
         });
 
+        it("should default name to class name when called without arguments", () => {
+            @Workflow()
+            class MyWorkflow {}
+
+            const meta = Reflect.getMetadata(WORKFLOW_METADATA_KEY, MyWorkflow);
+            expect(meta.name).toBe("MyWorkflow");
+        });
+
         it("should make the class injectable", () => {
             @Workflow("test")
             class TestWorkflow {}
@@ -56,6 +64,14 @@ describe("Class Decorators", () => {
             expect(meta).toEqual({ name: "my-service" });
         });
 
+        it("should default name to class name when called without arguments", () => {
+            @Service()
+            class MyService {}
+
+            const meta = Reflect.getMetadata(SERVICE_METADATA_KEY, MyService);
+            expect(meta.name).toBe("MyService");
+        });
+
         it("should make the class injectable", () => {
             @Service("test")
             class TestService {}
@@ -89,6 +105,19 @@ describe("Class Decorators", () => {
             expect(meta.options?.inactivityTimeout).toBe(30_000);
             expect(meta.options?.ingressPrivate).toBe(true);
         });
+
+        it("should default name to class name when options object omits name", () => {
+            @Service({
+                options: {
+                    retryPolicy: { maxAttempts: 3 },
+                },
+            })
+            class AutoNamedService {}
+
+            const meta = Reflect.getMetadata(SERVICE_METADATA_KEY, AutoNamedService);
+            expect(meta.name).toBe("AutoNamedService");
+            expect(meta.options?.retryPolicy?.maxAttempts).toBe(3);
+        });
     });
 
     describe("@VirtualObject", () => {
@@ -98,6 +127,14 @@ describe("Class Decorators", () => {
 
             const meta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, TestObject);
             expect(meta).toEqual({ name: "my-object" });
+        });
+
+        it("should default name to class name when called without arguments", () => {
+            @VirtualObject()
+            class MyObject {}
+
+            const meta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, MyObject);
+            expect(meta.name).toBe("MyObject");
         });
 
         it("should make the class injectable", () => {
