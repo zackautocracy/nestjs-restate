@@ -239,6 +239,40 @@ describe("RestateModule", () => {
             await app.close();
         });
 
+        it("should skip registration when {{port}} placeholder used in lambda mode", async () => {
+            const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+            const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { type: "lambda" },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:{{port}}",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+            const allOutput = [
+                ...stderrSpy.mock.calls.map((c) => String(c[0])),
+                ...stdoutSpy.mock.calls.map((c) => String(c[0])),
+            ];
+            const warnLogs = allOutput.filter((s) => s.includes("{{port}} placeholder"));
+            expect(warnLogs.length).toBeGreaterThan(0);
+
+            await app.close();
+            stderrSpy.mockRestore();
+            stdoutSpy.mockRestore();
+        });
+
         it("should send force: false in production mode by default", async () => {
             fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
                 if (!opts || opts.method !== "POST") {
@@ -594,6 +628,81 @@ describe("RestateModule", () => {
             ];
             const conflictLogs = allOutput.filter((s) => s.includes("Deployment conflict"));
             expect(conflictLogs.length).toBeGreaterThan(0);
+
+            await app.close();
+            stderrSpy.mockRestore();
+            stdoutSpy.mockRestore();
+        });
+
+        it("should warn on unexpected status codes", async () => {
+            const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+            const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+            fetchSpy.mockResolvedValue({
+                ok: false,
+                status: 500,
+                text: () => Promise.resolve("internal server error"),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const allOutput = [
+                ...stderrSpy.mock.calls.map((c) => String(c[0])),
+                ...stdoutSpy.mock.calls.map((c) => String(c[0])),
+            ];
+            const warnLogs = allOutput.filter((s) => s.includes("Failed to auto-register"));
+            expect(warnLogs.length).toBeGreaterThan(0);
+            expect(warnLogs[0]).toContain("500");
+
+            await app.close();
+            stderrSpy.mockRestore();
+            stdoutSpy.mockRestore();
+        });
+
+        it("should warn when POST throws a network error", async () => {
+            const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+            const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+            fetchSpy.mockRejectedValue(new Error("ECONNREFUSED"));
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const allOutput = [
+                ...stderrSpy.mock.calls.map((c) => String(c[0])),
+                ...stdoutSpy.mock.calls.map((c) => String(c[0])),
+            ];
+            const warnLogs = allOutput.filter((s) => s.includes("ECONNREFUSED"));
+            expect(warnLogs.length).toBeGreaterThan(0);
 
             await app.close();
             stderrSpy.mockRestore();
