@@ -23,7 +23,9 @@ import type {
 export function VirtualObject(nameOrOptions?: VirtualObjectDecoratorOptions): ClassDecorator {
     return (target) => {
         const meta: VirtualObjectComponentMetadata =
-            typeof nameOrOptions === "string" ? { name: nameOrOptions } : (nameOrOptions ?? {});
+            typeof nameOrOptions === "string"
+                ? { name: nameOrOptions }
+                : { ...(nameOrOptions ?? {}) };
 
         // Default name to class name if not provided
         if (!meta.name) {
