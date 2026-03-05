@@ -23,7 +23,9 @@ import type {
 export function Service(nameOrOptions?: ServiceDecoratorOptions): ClassDecorator {
     return (target) => {
         const meta: ServiceComponentMetadata =
-            typeof nameOrOptions === "string" ? { name: nameOrOptions } : (nameOrOptions ?? {});
+            typeof nameOrOptions === "string"
+                ? { name: nameOrOptions }
+                : { ...(nameOrOptions ?? {}) };
 
         // Default name to class name if not provided
         if (!meta.name) {

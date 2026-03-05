@@ -361,6 +361,38 @@ describe("RestateModule", () => {
             await app.close();
         });
 
+        it("should not allow custom metadata to override interface hash", async () => {
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            metadata: { "nestjs-restate.interface-hash": "evil" },
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+            expect(body.metadata["nestjs-restate.interface-hash"]).toMatch(/^sha256:/);
+            expect(body.metadata["nestjs-restate.interface-hash"]).not.toBe("evil");
+
+            await app.close();
+        });
+
         it("should skip POST when production mode GET finds matching hash", async () => {
             // Compute the expected hash for a single service with one handler
             const expectedHash = computeInterfaceHash([

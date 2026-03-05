@@ -154,8 +154,8 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
         const hash = computeInterfaceHash(this.componentSummary);
         const metadata: Record<string, string> = {
-            "nestjs-restate.interface-hash": hash,
             ...autoRegister.metadata,
+            "nestjs-restate.interface-hash": hash,
         };
 
         // Production mode pre-check: skip POST if deployment already registered with same hash
@@ -185,10 +185,10 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                         return;
                     }
                 }
-            } catch {
+            } catch (error: any) {
                 // GET failed — fall through to POST
                 RestateModule.logger.debug(
-                    `Pre-check GET /deployments failed, falling through to POST`,
+                    `Pre-check GET /deployments failed (${error?.message ?? error}), falling through to POST`,
                 );
             }
         }

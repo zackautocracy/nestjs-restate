@@ -163,4 +163,57 @@ describe("Class Decorators", () => {
             expect(meta.options?.retryPolicy?.onMaxAttempts).toBe("pause");
         });
     });
+
+    describe("shared options mutation safety", () => {
+        it("should not mutate a shared options object across @Service decorators", () => {
+            const shared = { options: { retryPolicy: { maxAttempts: 5 } } };
+
+            @Service(shared)
+            class Foo {}
+
+            @Service(shared)
+            class Bar {}
+
+            const fooMeta = Reflect.getMetadata(SERVICE_METADATA_KEY, Foo);
+            const barMeta = Reflect.getMetadata(SERVICE_METADATA_KEY, Bar);
+
+            expect(fooMeta.name).toBe("Foo");
+            expect(barMeta.name).toBe("Bar");
+            expect(shared).not.toHaveProperty("name");
+        });
+
+        it("should not mutate a shared options object across @Workflow decorators", () => {
+            const shared = { options: { retryPolicy: { maxAttempts: 3 } } };
+
+            @Workflow(shared)
+            class Alpha {}
+
+            @Workflow(shared)
+            class Beta {}
+
+            const alphaMeta = Reflect.getMetadata(WORKFLOW_METADATA_KEY, Alpha);
+            const betaMeta = Reflect.getMetadata(WORKFLOW_METADATA_KEY, Beta);
+
+            expect(alphaMeta.name).toBe("Alpha");
+            expect(betaMeta.name).toBe("Beta");
+            expect(shared).not.toHaveProperty("name");
+        });
+
+        it("should not mutate a shared options object across @VirtualObject decorators", () => {
+            const shared = { options: { enableLazyState: true } };
+
+            @VirtualObject(shared)
+            class One {}
+
+            @VirtualObject(shared)
+            class Two {}
+
+            const oneMeta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, One);
+            const twoMeta = Reflect.getMetadata(VIRTUAL_OBJECT_METADATA_KEY, Two);
+
+            expect(oneMeta.name).toBe("One");
+            expect(twoMeta.name).toBe("Two");
+            expect(shared).not.toHaveProperty("name");
+        });
+    });
 });

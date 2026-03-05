@@ -23,7 +23,9 @@ import type {
 export function Workflow(nameOrOptions?: WorkflowDecoratorOptions): ClassDecorator {
     return (target) => {
         const meta: WorkflowComponentMetadata =
-            typeof nameOrOptions === "string" ? { name: nameOrOptions } : (nameOrOptions ?? {});
+            typeof nameOrOptions === "string"
+                ? { name: nameOrOptions }
+                : { ...(nameOrOptions ?? {}) };
 
         // Default name to class name if not provided
         if (!meta.name) {
