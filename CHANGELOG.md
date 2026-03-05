@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.5.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.4.0...nestjs-restate-v2.5.0) (2026-03-05)
+
+
+### Features
+
+* enrich logger with class names and invocation IDs ([f134737](https://github.com/zackautocracy/nestjs-restate/commit/f1347378fe05581d58979253eb5b891372a99e03))
+* make decorator name argument optional ([50e9d81](https://github.com/zackautocracy/nestjs-restate/commit/50e9d811c82455d5d0120e027c16b680d0ed7513))
+* smart auto-registration with modes and hash dedup ([c9d2fd1](https://github.com/zackautocracy/nestjs-restate/commit/c9d2fd15eda0f533671355e533198f202b8c35ad))
+
+
+### Bug Fixes
+
+* address review feedback — prevent options mutation, protect hash key, log error details ([337cd65](https://github.com/zackautocracy/nestjs-restate/commit/337cd65f0a023c5b34a988787315c856ebb5cda5))
+* review cleanup — test mocks, dead code, logging ([c05be41](https://github.com/zackautocracy/nestjs-restate/commit/c05be41667b4ee515c840b7860e130a89fb3b5d8))
+
+
+### Documentation
+
+* correct exactly-once wording and @Shared/@Signal on workflows ([2d20c42](https://github.com/zackautocracy/nestjs-restate/commit/2d20c425903bd1cc2df6e3581f72f0e1ada1d9e9))
+* update README for optional decorator names and production auto-registration ([bca5a5e](https://github.com/zackautocracy/nestjs-restate/commit/bca5a5e22798332f690c49242be29ff5a0e7d7d7))
+
+
+### Tests
+
+* cover remaining branches in restate.module.ts (port guard, error paths) ([b803625](https://github.com/zackautocracy/nestjs-restate/commit/b803625d3982a384b7d64cecbaa323debdc5794a))
+
 ## [2.4.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.3.0...nestjs-restate-v2.4.0) (2026-03-03)
 
 
