@@ -45,6 +45,7 @@ describe("createRestateLoggerTransport", () => {
         const output = stdoutSpy.mock.calls[0][0] as string;
         expect(output).toContain("[Nest]");
         expect(output).toContain("LOG");
+        expect(output).toContain("[Restate]");
         expect(output).toContain("[payment/charge]");
         expect(output).toContain("Processing payment");
         expect(output.endsWith("\n")).toBe(true);
@@ -63,6 +64,7 @@ describe("createRestateLoggerTransport", () => {
         expect(stderrSpy).toHaveBeenCalledTimes(1);
         const output = stderrSpy.mock.calls[0][0] as string;
         expect(output).toContain("ERROR");
+        expect(output).toContain("[Restate]");
         expect(output).toContain("[order/cancel]");
     });
 
@@ -77,6 +79,13 @@ describe("createRestateLoggerTransport", () => {
 
         const output = stdoutSpy.mock.calls[0][0] as string;
         expect(output).toContain("[Restate]");
+        // Should NOT have a second bracket pair (no invocation context)
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping ANSI escape codes
+        const stripped = output.replace(/\x1B\[\d+m/g, "");
+        const brackets = stripped.match(/\[.*?\]/g) || [];
+        const restateIndex = brackets.indexOf("[Restate]");
+        // After [Restate], the next bracket content should be the message, not a target
+        expect(restateIndex).toBeGreaterThan(-1);
     });
 
     it("should format warn level correctly", () => {
@@ -474,6 +483,172 @@ describe("createRestateLoggerTransport", () => {
 
             const output = stdoutSpy.mock.calls[0][0] as string;
             expect(output).toContain("LOG");
+        });
+
+        it("should demote JOURNAL info messages to debug", () => {
+            const params: LogMetadata = {
+                source: "JOURNAL" as any,
+                level: "info" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, "Journal lifecycle message");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("DEBUG");
+            expect(output).not.toContain("LOG");
+        });
+
+        it("should NOT demote JOURNAL warn messages", () => {
+            const params: LogMetadata = {
+                source: "JOURNAL" as any,
+                level: "warn" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, "Journal warning");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("WARN");
+        });
+
+        it("should NOT demote JOURNAL error messages", () => {
+            const params: LogMetadata = {
+                source: "JOURNAL" as any,
+                level: "error" as any,
+                replaying: false,
+                context: { invocationTarget: "svc/handler" } as LoggerContext,
+            };
+
+            transport(params, "Journal error");
+
+            const output = stderrSpy.mock.calls[0][0] as string;
+            expect(output).toContain("ERROR");
+        });
+    });
+
+    describe("class name and invocation ID enrichment", () => {
+        it("should resolve class name from serviceClassNames map", () => {
+            const t = createRestateLoggerTransport({
+                serviceClassNames: new Map([["payment", "PaymentService"]]),
+            });
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: {
+                    invocationTarget: "payment/charge",
+                    serviceName: "payment",
+                } as LoggerContext,
+            };
+
+            t(params, "Charging user");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[PaymentService]");
+            expect(output).toContain("[payment/charge]");
+        });
+
+        it("should include invocation ID in log output", () => {
+            const t = createRestateLoggerTransport({
+                serviceClassNames: new Map([["payment", "PaymentService"]]),
+            });
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: {
+                    invocationTarget: "payment/charge",
+                    serviceName: "payment",
+                    invocationId: "inv_1a2b3c4d",
+                } as LoggerContext,
+            };
+
+            t(params, "Charging user");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[PaymentService]");
+            expect(output).toContain("[payment/charge -> inv_1a2b3c4d]");
+        });
+
+        it("should use 'Restate' when serviceName is not in the map", () => {
+            const t = createRestateLoggerTransport({
+                serviceClassNames: new Map([["other", "OtherService"]]),
+            });
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: {
+                    invocationTarget: "payment/charge",
+                    serviceName: "payment",
+                } as LoggerContext,
+            };
+
+            t(params, "Charging user");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[Restate]");
+            expect(output).toContain("[payment/charge]");
+        });
+
+        it("should use 'Restate' when no serviceClassNames map provided", () => {
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: {
+                    invocationTarget: "payment/charge",
+                    serviceName: "payment",
+                } as LoggerContext,
+            };
+
+            transport(params, "Charging user");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[Restate]");
+            expect(output).toContain("[payment/charge]");
+        });
+
+        it("should show only [Restate] with no second bracket when context is missing", () => {
+            const params: LogMetadata = {
+                source: "SYSTEM" as any,
+                level: "info" as any,
+                replaying: false,
+            };
+
+            transport(params, "Startup message");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[Restate]");
+            // Strip ANSI codes and verify no target bracket
+            // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping ANSI escape codes
+            const stripped = output.replace(/\x1B\[\d+m/g, "");
+            expect(stripped).not.toMatch(/\[Restate\]\s*\[/);
+        });
+
+        it("should show target without invocation ID when invocationId is missing", () => {
+            const t = createRestateLoggerTransport({
+                serviceClassNames: new Map([["payment", "PaymentService"]]),
+            });
+            const params: LogMetadata = {
+                source: "USER" as any,
+                level: "info" as any,
+                replaying: false,
+                context: {
+                    invocationTarget: "payment/charge",
+                    serviceName: "payment",
+                } as LoggerContext,
+            };
+
+            t(params, "Charging user");
+
+            const output = stdoutSpy.mock.calls[0][0] as string;
+            expect(output).toContain("[PaymentService]");
+            expect(output).toContain("[payment/charge]");
+            expect(output).not.toContain("->");
         });
     });
 });

@@ -56,6 +56,8 @@ export {
     VirtualObject,
     Workflow,
 } from "./decorators";
+// Discovery
+export type { DiscoveryResult } from "./discovery/restate.explorer";
 // Definition utilities
 export {
     objectDefinitionOf,

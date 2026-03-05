@@ -35,6 +35,7 @@ export class RestateEndpointManager {
             identityKeys?: string[];
             defaultServiceOptions?: DefaultServiceOptions;
             errors?: RestateErrorOptions;
+            serviceClassNames?: Map<string, string>;
         },
     ): Promise<void> {
         if (this.endpointHandler || this.httpServer) {
@@ -52,6 +53,7 @@ export class RestateEndpointManager {
             defaultServiceOptions: endpointOptions?.defaultServiceOptions,
             logger: createRestateLoggerTransport({
                 stackTraces: endpointOptions?.errors?.stackTraces,
+                serviceClassNames: endpointOptions?.serviceClassNames,
             }),
         });
         this.endpointHandler = handler;

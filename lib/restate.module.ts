@@ -91,7 +91,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit(): Promise<void> {
         Logger.overrideLogger(new RestateLoggerService());
-        const definitions = this.explorer.discover();
+        const { definitions, serviceClassNames } = this.explorer.discover();
 
         for (const def of definitions) {
             this.endpointManager.addDefinition(def);
@@ -102,6 +102,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 identityKeys: this.options.identityKeys,
                 defaultServiceOptions: this.options.defaultServiceOptions,
                 errors: this.options.errors,
+                serviceClassNames,
             });
         }
 

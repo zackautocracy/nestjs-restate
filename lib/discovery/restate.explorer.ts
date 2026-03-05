@@ -15,6 +15,11 @@ import type {
     ResolvedWorkflowComponentMetadata,
 } from "../restate.interfaces";
 
+export interface DiscoveryResult {
+    definitions: any[];
+    serviceClassNames: Map<string, string>;
+}
+
 @Injectable()
 export class RestateExplorer {
     private readonly logger = new Logger(RestateExplorer.name);
@@ -26,8 +31,9 @@ export class RestateExplorer {
         return (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
     }
 
-    discover(): any[] {
+    discover(): DiscoveryResult {
         const definitions: any[] = [];
+        const serviceClassNames = new Map<string, string>();
         const providers = this.discoveryService.getProviders();
 
         for (const wrapper of providers) {
@@ -45,16 +51,19 @@ export class RestateExplorer {
                 | undefined;
 
             if (workflowMeta) {
+                serviceClassNames.set(workflowMeta.name, instance.constructor.name);
                 definitions.push(this.buildWorkflow(instance, workflowMeta));
             } else if (serviceMeta) {
+                serviceClassNames.set(serviceMeta.name, instance.constructor.name);
                 definitions.push(this.buildService(instance, serviceMeta));
             } else if (virtualObjectMeta) {
+                serviceClassNames.set(virtualObjectMeta.name, instance.constructor.name);
                 definitions.push(this.buildVirtualObject(instance, virtualObjectMeta));
             }
         }
 
         this.logger.log(`Discovered ${definitions.length} Restate component(s)`);
-        return definitions;
+        return { definitions, serviceClassNames };
     }
 
     private buildWorkflow(instance: any, meta: ResolvedWorkflowComponentMetadata) {

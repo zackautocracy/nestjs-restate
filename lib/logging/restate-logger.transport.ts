@@ -38,6 +38,8 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
 export interface RestateLoggerOptions {
     /** Include stack traces in error output. Default: `false`. */
     stackTraces?: boolean;
+    /** Maps Restate service names to NestJS class names for log context. */
+    serviceClassNames?: Map<string, string>;
 }
 
 function getErrorLabel(error: Error): string {
@@ -70,7 +72,16 @@ function formatMessage(message: unknown, optionalParams: unknown[], includeStack
     return parts.join(" ");
 }
 
-function resolveLogLevel(level: string, message: unknown, optionalParams: unknown[]): string {
+function resolveLogLevel(
+    level: string,
+    message: unknown,
+    optionalParams: unknown[],
+    source?: string,
+): string {
+    // LogSource-based demotion: noisy JOURNAL info messages → debug.
+    if (level === "info" && source === "JOURNAL") {
+        return "debug";
+    }
     // Match SDK-internal "Invocation suspended" message (from @restatedev/restate-sdk).
     // If the SDK changes this wording, this check may need updating.
     if (
@@ -90,17 +101,37 @@ function resolveLogLevel(level: string, message: unknown, optionalParams: unknow
 
 export function createRestateLoggerTransport(options?: RestateLoggerOptions): LoggerTransport {
     const includeStack = options?.stackTraces ?? false;
+    const classNames = options?.serviceClassNames;
 
     return (params: LogMetadata, message?: any, ...optionalParams: any[]) => {
         if (params.replaying) return;
 
         const timestamp = dateTimeFormatter.format(Date.now());
         const pid = process.pid;
-        const context = params.context?.invocationTarget ?? "Restate";
-        const effectiveLevel = resolveLogLevel(params.level, message, optionalParams);
+        const effectiveLevel = resolveLogLevel(
+            params.level,
+            message,
+            optionalParams,
+            params.source as string | undefined,
+        );
         const levelLabel = LEVEL_LABELS[effectiveLevel] ?? "LOG";
         const colorFn = LEVEL_COLORS[effectiveLevel] ?? clc.green;
         const formattedMessage = formatMessage(message, optionalParams, includeStack);
+
+        // Build context section: [ClassName] [target -> invocationId]
+        let contextSection: string;
+        if (params.context?.invocationTarget) {
+            const className = params.context.serviceName
+                ? (classNames?.get(params.context.serviceName) ?? "Restate")
+                : "Restate";
+            const invocationId = params.context.invocationId;
+            const targetPart = invocationId
+                ? `${params.context.invocationTarget} -> ${invocationId}`
+                : params.context.invocationTarget;
+            contextSection = clc.yellow(`[${className}] `) + clc.yellow(`[${targetPart}] `);
+        } else {
+            contextSection = clc.yellow("[Restate] ");
+        }
 
         // Match NestJS ConsoleLogger.formatMessage layout exactly:
         // ${pidMessage}${timestamp} ${formattedLogLevel} ${contextMessage}${output}\n
@@ -110,7 +141,7 @@ export function createRestateLoggerTransport(options?: RestateLoggerOptions): Lo
             `${timestamp} ` +
             colorFn(levelLabel.padStart(7)) +
             ` ` +
-            clc.yellow(`[${context}] `) +
+            contextSection +
             colorFn(formattedMessage) +
             "\n";
 

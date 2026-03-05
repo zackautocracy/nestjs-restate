@@ -31,7 +31,7 @@ describe("RestateExplorer", () => {
             const instance = new TestWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("test-workflow");
@@ -93,7 +93,7 @@ describe("RestateExplorer", () => {
             const instance = new TestService();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("test-service");
@@ -129,7 +129,7 @@ describe("RestateExplorer", () => {
             const instance = new TestObject();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("test-object");
@@ -162,7 +162,7 @@ describe("RestateExplorer", () => {
             const instance = new BindingWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             // The workflow definition is created — verify that the run handler
             // is bound correctly by calling it
@@ -199,7 +199,7 @@ describe("RestateExplorer", () => {
 
             const discoveryService = createMockDiscoveryService([new Wf(), new Svc(), new Obj()]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(3);
             expect(definitions.map((d) => d.name).sort()).toEqual(["obj", "svc", "wf"]);
@@ -222,10 +222,50 @@ describe("RestateExplorer", () => {
 
             const discoveryService = createMockDiscoveryService([new Wf(), new RegularService()]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("wf");
+        });
+
+        it("should populate serviceClassNames map for all discovered components", () => {
+            @Workflow("wf")
+            class MyWorkflow {
+                @Run()
+                async run() {
+                    /* noop */
+                }
+            }
+
+            @Service("svc")
+            class MySvc {
+                @Handler()
+                async handle() {
+                    /* noop */
+                }
+            }
+
+            @VirtualObject("obj")
+            class MyObj {
+                @Handler()
+                async increment() {
+                    /* noop */
+                }
+            }
+
+            const discoveryService = createMockDiscoveryService([
+                new MyWorkflow(),
+                new MySvc(),
+                new MyObj(),
+            ]);
+            const explorer = new RestateExplorer(discoveryService as any);
+            const { definitions, serviceClassNames } = explorer.discover();
+
+            expect(definitions).toHaveLength(3);
+            expect(serviceClassNames.size).toBe(3);
+            expect(serviceClassNames.get("wf")).toBe("MyWorkflow");
+            expect(serviceClassNames.get("svc")).toBe("MySvc");
+            expect(serviceClassNames.get("obj")).toBe("MyObj");
         });
     });
 
@@ -250,7 +290,7 @@ describe("RestateExplorer", () => {
             const instance = new ConfiguredService();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("configured-service");
@@ -287,7 +327,7 @@ describe("RestateExplorer", () => {
             const instance = new ConfiguredWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("configured-workflow");
@@ -323,7 +363,7 @@ describe("RestateExplorer", () => {
             const instance = new ConfiguredObject();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("configured-object");
@@ -346,7 +386,7 @@ describe("RestateExplorer", () => {
             const instance = new SvcWithHandlerOpts();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("svc-with-handler-opts");
@@ -364,7 +404,7 @@ describe("RestateExplorer", () => {
             const instance = new WfWithHandlerOpts();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("wf-with-handler-opts");
@@ -387,7 +427,7 @@ describe("RestateExplorer", () => {
             const instance = new ObjWithHandlerOpts();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("obj-with-handler-opts");
@@ -415,7 +455,7 @@ describe("RestateExplorer", () => {
 
             const discoveryService = createMockDiscoveryService([new Configured(), new Plain()]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(2);
             expect(definitions.map((d) => d.name).sort()).toEqual(["configured", "plain"]);
@@ -438,7 +478,7 @@ describe("RestateExplorer", () => {
             const instance = new ArgCheckService();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             const mockCtx = { serviceName: "test" };
             const mockInput = { data: "hello" };
@@ -466,7 +506,7 @@ describe("RestateExplorer", () => {
             const instance = new CtxCaptureService();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             const mockCtx = { serviceName: "ctx-capture", run: vi.fn() };
             await definitions[0].service.capture(mockCtx, undefined);
@@ -492,7 +532,7 @@ describe("RestateExplorer", () => {
             const instance = new AlsWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             const mockCtx = { workflowId: "wf-123" };
             await definitions[0].workflow.run(mockCtx, "test-input");
@@ -518,7 +558,7 @@ describe("RestateExplorer", () => {
             const instance = new AlsObject();
             const discoveryService = createMockDiscoveryService([instance]);
             const explorer = new RestateExplorer(discoveryService as any);
-            const definitions = explorer.discover();
+            const { definitions } = explorer.discover();
 
             const mockCtx = { key: "obj-1" };
             await definitions[0].object.increment(mockCtx, 5);
