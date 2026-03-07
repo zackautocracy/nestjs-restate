@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { RestateModuleOptions } from "nestjs-restate";
 import { Handler, Run, Service, Shared, Signal, VirtualObject, Workflow } from "nestjs-restate";
 import { RestateExplorer } from "nestjs-restate/discovery/restate.explorer";
 
@@ -10,6 +11,31 @@ function createMockDiscoveryService(instances: any[]) {
                 metatype: instance.constructor,
             })),
     };
+}
+
+function createMockExternalContextCreator() {
+    return {
+        create: vi.fn((instance: any, callback: Function) => {
+            return (...args: any[]) => callback.call(instance, args[0]);
+        }),
+    };
+}
+
+const defaultMockOptions: RestateModuleOptions = {
+    ingress: "http://localhost:8080",
+    endpoint: { port: 9080 },
+};
+
+function createRestateExplorer(
+    discoveryService: any,
+    externalContextCreator?: any,
+    options?: RestateModuleOptions,
+) {
+    return new RestateExplorer(
+        discoveryService as any,
+        (externalContextCreator ?? createMockExternalContextCreator()) as any,
+        options ?? defaultMockOptions,
+    );
 }
 
 describe("RestateExplorer", () => {
@@ -30,7 +56,7 @@ describe("RestateExplorer", () => {
 
             const instance = new TestWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -48,7 +74,7 @@ describe("RestateExplorer", () => {
 
             const instance = new BadWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
 
             expect(() => explorer.discover()).toThrow(/must have exactly one @Run/);
         });
@@ -69,7 +95,7 @@ describe("RestateExplorer", () => {
 
             const instance = new MultiRunWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
 
             expect(() => explorer.discover()).toThrow(/must have exactly one @Run/);
         });
@@ -92,7 +118,7 @@ describe("RestateExplorer", () => {
 
             const instance = new TestService();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -105,7 +131,7 @@ describe("RestateExplorer", () => {
 
             const instance = new EmptyService();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
 
             expect(() => explorer.discover()).toThrow(/must have at least one @Handler/);
         });
@@ -128,7 +154,7 @@ describe("RestateExplorer", () => {
 
             const instance = new TestObject();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -141,7 +167,7 @@ describe("RestateExplorer", () => {
 
             const instance = new EmptyObject();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
 
             expect(() => explorer.discover()).toThrow(/must have at least one/);
         });
@@ -161,7 +187,7 @@ describe("RestateExplorer", () => {
 
             const instance = new BindingWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             // The workflow definition is created — verify that the run handler
@@ -198,7 +224,7 @@ describe("RestateExplorer", () => {
             }
 
             const discoveryService = createMockDiscoveryService([new Wf(), new Svc(), new Obj()]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(3);
@@ -221,7 +247,7 @@ describe("RestateExplorer", () => {
             }
 
             const discoveryService = createMockDiscoveryService([new Wf(), new RegularService()]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -258,7 +284,7 @@ describe("RestateExplorer", () => {
                 new MySvc(),
                 new MyObj(),
             ]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions, serviceClassNames } = explorer.discover();
 
             expect(definitions).toHaveLength(3);
@@ -289,7 +315,7 @@ describe("RestateExplorer", () => {
 
             const instance = new ConfiguredService();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -326,7 +352,7 @@ describe("RestateExplorer", () => {
 
             const instance = new ConfiguredWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -362,7 +388,7 @@ describe("RestateExplorer", () => {
 
             const instance = new ConfiguredObject();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -385,7 +411,7 @@ describe("RestateExplorer", () => {
 
             const instance = new SvcWithHandlerOpts();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -403,7 +429,7 @@ describe("RestateExplorer", () => {
 
             const instance = new WfWithHandlerOpts();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -426,7 +452,7 @@ describe("RestateExplorer", () => {
 
             const instance = new ObjWithHandlerOpts();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
@@ -454,7 +480,7 @@ describe("RestateExplorer", () => {
             }
 
             const discoveryService = createMockDiscoveryService([new Configured(), new Plain()]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(2);
@@ -477,7 +503,7 @@ describe("RestateExplorer", () => {
 
             const instance = new ArgCheckService();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             const mockCtx = { serviceName: "test" };
@@ -505,7 +531,7 @@ describe("RestateExplorer", () => {
 
             const instance = new CtxCaptureService();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             const mockCtx = { serviceName: "ctx-capture", run: vi.fn() };
@@ -531,7 +557,7 @@ describe("RestateExplorer", () => {
 
             const instance = new AlsWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             const mockCtx = { workflowId: "wf-123" };
@@ -557,7 +583,7 @@ describe("RestateExplorer", () => {
 
             const instance = new AlsObject();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             const mockCtx = { key: "obj-1" };
@@ -577,7 +603,7 @@ describe("RestateExplorer", () => {
 
             const instance = new BadRunName();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
 
             expect(() => explorer.discover()).toThrow(/must be named 'run', found 'execute'/);
         });
@@ -603,11 +629,98 @@ describe("RestateExplorer", () => {
 
             const instance = new SharedWorkflow();
             const discoveryService = createMockDiscoveryService([instance]);
-            const explorer = new RestateExplorer(discoveryService as any);
+            const explorer = createRestateExplorer(discoveryService);
             const { definitions } = explorer.discover();
 
             expect(definitions).toHaveLength(1);
             expect(definitions[0].name).toBe("shared-workflow");
+        });
+    });
+
+    describe("pipeline integration", () => {
+        it("should call externalContextCreator.create for each handler method", () => {
+            @Service("pipeline-svc")
+            class PipelineSvc {
+                @Handler()
+                async greet() {
+                    return "hello";
+                }
+
+                @Handler()
+                async farewell() {
+                    return "bye";
+                }
+            }
+
+            const instance = new PipelineSvc();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const mockCreator = createMockExternalContextCreator();
+            const explorer = createRestateExplorer(discoveryService, mockCreator);
+            explorer.discover();
+
+            expect(mockCreator.create).toHaveBeenCalledTimes(2);
+            const methodNames = mockCreator.create.mock.calls.map((c: any[]) => c[2]);
+            expect(methodNames.sort()).toEqual(["farewell", "greet"]);
+        });
+
+        it("should default pipeline options to guards, interceptors, and filters enabled", () => {
+            @Service("default-pipeline")
+            class DefaultPipeline {
+                @Handler()
+                async handle() {
+                    return "ok";
+                }
+            }
+
+            const instance = new DefaultPipeline();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const mockCreator = createMockExternalContextCreator();
+            const explorer = createRestateExplorer(discoveryService, mockCreator, {
+                ingress: "http://localhost:8080",
+                endpoint: { port: 9080 },
+            });
+            explorer.discover();
+
+            expect(mockCreator.create).toHaveBeenCalledTimes(1);
+            const callArgs = mockCreator.create.mock.calls[0];
+            // opts is the 8th argument (index 7)
+            expect(callArgs[7]).toEqual({
+                guards: true,
+                interceptors: true,
+                filters: true,
+            });
+        });
+
+        it("should pass custom pipeline options through", () => {
+            @Service("custom-pipeline")
+            class CustomPipeline {
+                @Handler()
+                async handle() {
+                    return "ok";
+                }
+            }
+
+            const instance = new CustomPipeline();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const mockCreator = createMockExternalContextCreator();
+            const explorer = createRestateExplorer(discoveryService, mockCreator, {
+                ingress: "http://localhost:8080",
+                endpoint: { port: 9080 },
+                pipeline: {
+                    guards: false,
+                    interceptors: true,
+                    filters: false,
+                },
+            });
+            explorer.discover();
+
+            expect(mockCreator.create).toHaveBeenCalledTimes(1);
+            const callArgs = mockCreator.create.mock.calls[0];
+            expect(callArgs[7]).toEqual({
+                guards: false,
+                interceptors: true,
+                filters: false,
+            });
         });
     });
 });

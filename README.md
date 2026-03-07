@@ -28,6 +28,7 @@ NestJS services don't survive crashes. If your app restarts mid-request, in-prog
 - **Typed service proxies** — call other Restate services with full type safety via `@InjectClient(ServiceClass)`
 - **Typed Ingress client** — call Restate services from REST controllers and cron jobs using decorated classes directly
 - **Auto-discovery** — decorated classes are registered automatically, no manual wiring
+- **NestJS execution pipeline** — guards, interceptors, pipes, and exception filters work on Restate handlers
 - **Replay-aware logging** — NestJS `Logger` calls are automatically silenced during replay
 - **SDK passthrough** — retry policies, timeouts, and handler options forwarded directly to the Restate SDK
 
@@ -243,6 +244,7 @@ If you know NestJS, you already know 80% of what you need:
 | Saga / multi-step job | `@Workflow()` | A durable process with signals, promises, and exactly-once completion |
 | `constructor(private svc: MyService)` | `@InjectClient(MyService)` | Type-safe RPC between Restate services via DI |
 | HTTP controller calling a service | `@InjectClient()` Ingress | Call Restate services from REST controllers, cron jobs, etc. |
+| `@UseGuards()`, `@UseInterceptors()` | Same decorators | Guards, interceptors, pipes, and filters work on handlers automatically |
 
 ## Calling Services
 
@@ -403,6 +405,66 @@ This also works per-component via decorator options:
 
 All error classes (`TerminalError`, `RetryableError`, `TimeoutError`, `CancelledError`, `RestateError`) are re-exported from `nestjs-restate`.
 
+## Execution Pipeline
+
+Guards, interceptors, pipes, and exception filters work on Restate handlers automatically — use `@UseGuards()`, `@UseInterceptors()`, `@UseFilters()` the same way you would on a controller.
+
+### Handler Parameter Decorators
+
+Use `@Input()` and `@Ctx()` to inject handler arguments — same pattern as `@Body()` / `@Param()` for HTTP or `@Args()` for GraphQL:
+
+```typescript
+@Service('payment')
+export class PaymentService {
+    constructor(private readonly gateway: PaymentGateway) {}
+
+    @Handler()
+    async charge(@Input() input: ChargeRequest) {
+        return this.gateway.process(input);
+    }
+
+    @Handler()
+    async refund(@Input('transactionId') txnId: string, @Ctx() ctx: Context) {
+        await ctx.run('refund', () => this.gateway.refund(txnId));
+    }
+}
+```
+
+| Decorator | Description |
+|---|---|
+| `@Input()` | Handler input (full object) |
+| `@Input('property')` | Single property from the input |
+| `@Ctx()` | Restate SDK context (`Context`, `ObjectContext`, `WorkflowContext`) |
+
+Handlers without decorators continue to work — `@Input()` is injected automatically as the first parameter when no decorators are present.
+
+### Guards and Interceptors
+
+The handler args follow the RPC convention: `context.switchToRpc().getData()` returns the handler input, `context.switchToRpc().getContext()` returns the Restate SDK context. Use `context.getType()` to distinguish Restate from other context types:
+
+```typescript
+@Injectable()
+export class AmountLimitGuard implements CanActivate {
+    canActivate(context: ExecutionContext): boolean {
+        if (context.getType() !== 'restate') return true;
+        const input = context.switchToRpc().getData();
+        return input.amount <= 10_000;
+    }
+}
+```
+
+### RestateExceptionFilter
+
+Maps NestJS HTTP exceptions to Restate semantics — `TerminalError` passes through, 4xx → `TerminalError` (not retried), 5xx/unknown → rethrown (retried). Complementary to `asTerminalError`:
+
+```typescript
+@Service('payment')
+@UseFilters(RestateExceptionFilter)
+export class PaymentService { ... }
+```
+
+To disable pipeline features globally, see `pipeline` in [Configuration](#module-options).
+
 ## Logging
 
 `nestjs-restate` ships a **replay-aware logger** that works automatically — no setup required.
@@ -512,6 +574,11 @@ RestateModule.forRoot({
     },
     errors: {                                 // Error formatting in logs (see Logging)
         stackTraces: true,                    // Include stack traces (default: false)
+    },
+    pipeline: {                               // Execution pipeline (see Execution Pipeline)
+        guards: true,                         // Enable guards (default: true)
+        interceptors: true,                   // Enable interceptors (default: true)
+        filters: true,                        // Enable exception filters (default: true)
     },
 })
 ```
@@ -683,6 +750,17 @@ Component and handler decorators also accept an optional options object for SDK-
 | Escape Hatch | `raw` | Direct SDK context access |
 
 For service-to-service calls, use `@InjectClient()` with typed proxies instead of `ctx.serviceClient()`. See [Calling Services](#from-handler-to-handler-typed-proxies).
+
+### Pipeline
+
+| Export | Description |
+|---|---|
+| `Input()` | Parameter decorator — injects handler input (or a single property with `@Input('prop')`) |
+| `Ctx()` | Parameter decorator — injects the Restate SDK context |
+| `RestateExceptionFilter` | Exception filter — 4xx `HttpException` → `TerminalError`, 5xx/unknown → rethrown |
+| `RestateExecutionContext` | Typed wrapper with `getInput()` / `getRestateContext()` — alternative to `switchToRpc()` |
+| `RestateContextType` | String literal `'restate'` — returned by `context.getType()` |
+| `PipelineOptions` | Configuration type for the `pipeline` module option |
 
 ## Migrating from v1
 

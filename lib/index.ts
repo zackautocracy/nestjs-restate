@@ -79,6 +79,9 @@ export { createRestateIngress } from "./ingress/restate-ingress";
 export { RestateLoggerService } from "./logging/restate-logger.service";
 export type { RestateLoggerOptions } from "./logging/restate-logger.transport";
 export { createRestateLoggerTransport } from "./logging/restate-logger.transport";
+export type { RestateContextType } from "./pipeline";
+// Pipeline
+export { Ctx, Input, RestateExceptionFilter, RestateExecutionContext } from "./pipeline";
 // Proxy types
 export type {
     HandlerMethods,
@@ -97,6 +100,7 @@ export type {
     AnyHandlerOpts,
     AutoRegisterOptions,
     EndpointConfig,
+    PipelineOptions,
     ResolvedServiceComponentMetadata,
     ResolvedVirtualObjectComponentMetadata,
     ResolvedWorkflowComponentMetadata,

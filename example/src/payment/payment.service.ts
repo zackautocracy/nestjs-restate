@@ -1,5 +1,6 @@
-import { Logger } from "@nestjs/common";
+import { Logger, UseGuards } from "@nestjs/common";
 import { Handler, RestateContext, Service } from "nestjs-restate";
+import { AmountLimitGuard } from "../shared/guards/amount-limit.guard";
 import type { ChargeRequest, ChargeResult, RefundRequest } from "../shared/interfaces";
 import { PaymentGateway } from "./payment-gateway";
 
@@ -20,6 +21,7 @@ export class PaymentService {
     ) {}
 
     @Handler()
+    @UseGuards(AmountLimitGuard)
     async charge(input: ChargeRequest): Promise<ChargeResult> {
         this.logger.log(`Charging ${input.amount} ${input.currency}`);
 

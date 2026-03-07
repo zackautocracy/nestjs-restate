@@ -1,9 +1,15 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { DiscoveryService } from "@nestjs/core";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants";
+import { DiscoveryService, ExternalContextCreator } from "@nestjs/core";
 import * as restate from "@restatedev/restate-sdk";
 import { runWithContext } from "../context/restate-context.store";
 import {
+    DEFAULT_RESTATE_CALLBACK_METADATA,
+    RestateParamsFactory,
+} from "../pipeline/restate-params-factory";
+import {
     HANDLER_METADATA_KEY,
+    RESTATE_OPTIONS,
     SERVICE_METADATA_KEY,
     VIRTUAL_OBJECT_METADATA_KEY,
     WORKFLOW_METADATA_KEY,
@@ -13,6 +19,7 @@ import type {
     ResolvedServiceComponentMetadata,
     ResolvedVirtualObjectComponentMetadata,
     ResolvedWorkflowComponentMetadata,
+    RestateModuleOptions,
 } from "../restate.interfaces";
 
 export interface ComponentSummary {
@@ -30,12 +37,49 @@ export interface DiscoveryResult {
 @Injectable()
 export class RestateExplorer {
     private readonly logger = new Logger(RestateExplorer.name);
+    private readonly restateParamsFactory = new RestateParamsFactory();
 
-    constructor(private readonly discoveryService: DiscoveryService) {}
+    constructor(
+        private readonly discoveryService: DiscoveryService,
+        private readonly externalContextCreator: ExternalContextCreator,
+        @Inject(RESTATE_OPTIONS) private readonly options: RestateModuleOptions,
+    ) {}
 
-    /** Wrap a bound handler method so its Restate SDK context is stored in AsyncLocalStorage. */
-    private wrapHandler(rawFn: (input: any) => any) {
-        return (ctx: any, input: any) => runWithContext(ctx, () => rawFn(input));
+    private ensureDefaultParamMetadata(instance: any, methodName: string) {
+        const existing = Reflect.getMetadata(ROUTE_ARGS_METADATA, instance.constructor, methodName);
+        if (!existing) {
+            Reflect.defineMetadata(
+                ROUTE_ARGS_METADATA,
+                DEFAULT_RESTATE_CALLBACK_METADATA,
+                instance.constructor,
+                methodName,
+            );
+        }
+    }
+
+    private wrapHandler(instance: any, methodName: string) {
+        const pipelineOpts = this.options.pipeline;
+        const opts = {
+            guards: pipelineOpts?.guards ?? true,
+            interceptors: pipelineOpts?.interceptors ?? true,
+            filters: pipelineOpts?.filters ?? true,
+        };
+
+        this.ensureDefaultParamMetadata(instance, methodName);
+
+        const enhancedFn = this.externalContextCreator.create(
+            instance,
+            instance[methodName],
+            methodName,
+            ROUTE_ARGS_METADATA,
+            this.restateParamsFactory,
+            undefined,
+            undefined,
+            opts,
+            "restate",
+        );
+
+        return (ctx: any, input: any) => runWithContext(ctx, () => enhancedFn(input, ctx));
     }
 
     discover(): DiscoveryResult {
@@ -115,8 +159,7 @@ export class RestateExplorer {
                 `@Workflow('${meta.name}') @Run() method must be named 'run', found '${runHandler.methodName}'`,
             );
         }
-        const rawRunFn = instance[runHandler.methodName].bind(instance);
-        const runFn = this.wrapHandler(rawRunFn);
+        const runFn = this.wrapHandler(instance, runHandler.methodName);
 
         const handlerMap: Record<string, any> = {
             run: runHandler.options
@@ -125,8 +168,7 @@ export class RestateExplorer {
         };
 
         for (const h of sharedHandlers) {
-            const rawFn = instance[h.methodName].bind(instance);
-            const fn = this.wrapHandler(rawFn);
+            const fn = this.wrapHandler(instance, h.methodName);
             handlerMap[h.methodName] = h.options
                 ? restate.handlers.workflow.shared(h.options, fn)
                 : restate.createWorkflowSharedHandler(fn);
@@ -157,8 +199,7 @@ export class RestateExplorer {
 
         const handlerMap: Record<string, any> = {};
         for (const h of handlerMethods) {
-            const rawFn = instance[h.methodName].bind(instance);
-            const fn = this.wrapHandler(rawFn);
+            const fn = this.wrapHandler(instance, h.methodName);
             handlerMap[h.methodName] = h.options ? restate.handlers.handler(h.options, fn) : fn;
         }
 
@@ -189,16 +230,14 @@ export class RestateExplorer {
         const handlerMap: Record<string, any> = {};
 
         for (const h of exclusiveHandlers) {
-            const rawFn = instance[h.methodName].bind(instance);
-            const fn = this.wrapHandler(rawFn);
+            const fn = this.wrapHandler(instance, h.methodName);
             handlerMap[h.methodName] = h.options
                 ? restate.handlers.object.exclusive(h.options, fn)
                 : fn;
         }
 
         for (const h of sharedHandlers) {
-            const rawFn = instance[h.methodName].bind(instance);
-            const fn = this.wrapHandler(rawFn);
+            const fn = this.wrapHandler(instance, h.methodName);
             handlerMap[h.methodName] = h.options
                 ? restate.handlers.object.shared(h.options, fn)
                 : restate.createObjectSharedHandler(fn);

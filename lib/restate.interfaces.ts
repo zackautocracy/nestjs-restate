@@ -82,6 +82,20 @@ export interface RestateModuleOptions {
     defaultServiceOptions?: DefaultServiceOptions;
     /** Error formatting options for the logger transport. */
     errors?: RestateErrorOptions;
+    /**
+     * Pipeline options controlling NestJS execution pipeline integration.
+     * When not specified, all pipeline features are enabled.
+     */
+    pipeline?: PipelineOptions;
+}
+
+export interface PipelineOptions {
+    /** Enable guards for Restate handlers. Default: `true`. */
+    guards?: boolean;
+    /** Enable interceptors for Restate handlers. Default: `true`. */
+    interceptors?: boolean;
+    /** Enable exception filters for Restate handlers. Default: `true`. */
+    filters?: boolean;
 }
 
 export interface RestateModuleAsyncOptions {
