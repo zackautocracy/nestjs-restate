@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.6.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.5.0...nestjs-restate-v2.6.0) (2026-03-07)
+
+
+### Features
+
+* integrate NestJS execution pipeline with Restate handlers ([fe11608](https://github.com/zackautocracy/nestjs-restate/commit/fe1160853dfc084dd968d860d0ed87c9d120d133))
+
+
+### Bug Fixes
+
+* address review feedback — clone default metadata, add guard to providers ([f060ffa](https://github.com/zackautocracy/nestjs-restate/commit/f060ffafdd9fa492c0f0188f20f1eccac59bc6ce))
+
+
+### Tests
+
+* add factory function tests for @Input() and @Ctx() decorators ([7ab4c6a](https://github.com/zackautocracy/nestjs-restate/commit/7ab4c6a37acd3bcd20cf6f7395c03534a53c738e))
+
 ## [2.5.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.4.0...nestjs-restate-v2.5.0) (2026-03-05)
 
 
