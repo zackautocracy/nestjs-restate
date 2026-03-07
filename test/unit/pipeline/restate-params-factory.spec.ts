@@ -1,5 +1,5 @@
 import {
-    DEFAULT_RESTATE_CALLBACK_METADATA,
+    createDefaultRestateCallbackMetadata,
     RestateParamsFactory,
     RestateParamtype,
 } from "nestjs-restate/pipeline/restate-params-factory";
@@ -91,10 +91,17 @@ describe("RestateParamsFactory", () => {
     });
 });
 
-describe("DEFAULT_RESTATE_CALLBACK_METADATA", () => {
-    it('should have key "0:0" with correct shape', () => {
-        expect(DEFAULT_RESTATE_CALLBACK_METADATA).toEqual({
+describe("createDefaultRestateCallbackMetadata", () => {
+    it("should return correct shape", () => {
+        expect(createDefaultRestateCallbackMetadata()).toEqual({
             "0:0": { index: 0, data: undefined, pipes: [] },
         });
+    });
+
+    it("should return a fresh object each call", () => {
+        const a = createDefaultRestateCallbackMetadata();
+        const b = createDefaultRestateCallbackMetadata();
+        expect(a).not.toBe(b);
+        expect(a["0:0"].pipes).not.toBe(b["0:0"].pipes);
     });
 });

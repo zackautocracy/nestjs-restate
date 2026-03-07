@@ -20,6 +20,8 @@ export class RestateParamsFactory implements ParamsFactory {
     }
 }
 
-export const DEFAULT_RESTATE_CALLBACK_METADATA = {
-    [`${RestateParamtype.INPUT}:0`]: { index: 0, data: undefined, pipes: [] },
-};
+export function createDefaultRestateCallbackMetadata() {
+    return {
+        [`${RestateParamtype.INPUT}:0`]: { index: 0, data: undefined, pipes: [] },
+    };
+}

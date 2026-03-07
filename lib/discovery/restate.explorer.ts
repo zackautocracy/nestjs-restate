@@ -4,7 +4,7 @@ import { DiscoveryService, ExternalContextCreator } from "@nestjs/core";
 import * as restate from "@restatedev/restate-sdk";
 import { runWithContext } from "../context/restate-context.store";
 import {
-    DEFAULT_RESTATE_CALLBACK_METADATA,
+    createDefaultRestateCallbackMetadata,
     RestateParamsFactory,
 } from "../pipeline/restate-params-factory";
 import {
@@ -50,7 +50,7 @@ export class RestateExplorer {
         if (!existing) {
             Reflect.defineMetadata(
                 ROUTE_ARGS_METADATA,
-                DEFAULT_RESTATE_CALLBACK_METADATA,
+                createDefaultRestateCallbackMetadata(),
                 instance.constructor,
                 methodName,
             );
