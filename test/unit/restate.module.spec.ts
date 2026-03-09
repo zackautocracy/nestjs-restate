@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Global, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import * as clients from "@restatedev/restate-sdk-clients";
 import {
     Handler,
     RESTATE_CLIENT,
@@ -15,6 +16,14 @@ import { RestateEndpointManager } from "nestjs-restate/endpoint/restate.endpoint
 import { getClientToken } from "nestjs-restate/proxy/client-token";
 import { RESTATE_OPTIONS } from "nestjs-restate/restate.constants";
 import { computeInterfaceHash } from "nestjs-restate/restate.module";
+
+vi.mock("@restatedev/restate-sdk-clients", async (importOriginal) => {
+    const original = await importOriginal<typeof clients>();
+    return {
+        ...original,
+        connect: vi.fn(original.connect),
+    };
+});
 
 describe("RestateModule", () => {
     describe("forRoot", () => {
@@ -1013,6 +1022,74 @@ describe("RestateModule", () => {
 
             const paymentProxy = module.get(getClientToken(PaymentService));
             expect(paymentProxy).toBeDefined();
+
+            await module.close();
+        });
+    });
+
+    describe("ingressHeaders", () => {
+        it("should pass ingressHeaders to clients.connect() via forRoot", async () => {
+            const connectMock = vi.mocked(clients.connect);
+            connectMock.mockClear();
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        ingressHeaders: { Authorization: "Bearer ingress-token" },
+                        endpoint: { port: 0 },
+                    }),
+                ],
+            }).compile();
+
+            expect(connectMock).toHaveBeenCalledWith({
+                url: "http://localhost:8080",
+                headers: { Authorization: "Bearer ingress-token" },
+            });
+
+            await module.close();
+        });
+
+        it("should pass ingressHeaders to clients.connect() via forRootAsync", async () => {
+            const connectMock = vi.mocked(clients.connect);
+            connectMock.mockClear();
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRootAsync({
+                        useFactory: () => ({
+                            ingress: "http://localhost:8080",
+                            ingressHeaders: { Authorization: "Bearer async-token" },
+                            endpoint: { port: 0 },
+                        }),
+                    }),
+                ],
+            }).compile();
+
+            expect(connectMock).toHaveBeenCalledWith({
+                url: "http://localhost:8080",
+                headers: { Authorization: "Bearer async-token" },
+            });
+
+            await module.close();
+        });
+
+        it("should not pass headers when ingressHeaders is not provided", async () => {
+            const connectMock = vi.mocked(clients.connect);
+            connectMock.mockClear();
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        endpoint: { port: 0 },
+                    }),
+                ],
+            }).compile();
+
+            expect(connectMock).toHaveBeenCalledWith({
+                url: "http://localhost:8080",
+            });
 
             await module.close();
         });

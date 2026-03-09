@@ -65,8 +65,15 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 { provide: RESTATE_OPTIONS, useValue: options },
                 {
                     provide: RESTATE_CLIENT,
-                    useFactory: () =>
-                        createRestateIngress(clients.connect({ url: options.ingress })),
+                    useFactory: () => {
+                        const connectOpts: { url: string; headers?: Record<string, string> } = {
+                            url: options.ingress,
+                        };
+                        if (options.ingressHeaders) {
+                            connectOpts.headers = options.ingressHeaders;
+                        }
+                        return createRestateIngress(clients.connect(connectOpts));
+                    },
                 },
                 RestateExplorer,
                 RestateEndpointManager,
@@ -91,8 +98,15 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 },
                 {
                     provide: RESTATE_CLIENT,
-                    useFactory: (opts: RestateModuleOptions) =>
-                        createRestateIngress(clients.connect({ url: opts.ingress })),
+                    useFactory: (opts: RestateModuleOptions) => {
+                        const connectOpts: { url: string; headers?: Record<string, string> } = {
+                            url: opts.ingress,
+                        };
+                        if (opts.ingressHeaders) {
+                            connectOpts.headers = opts.ingressHeaders;
+                        }
+                        return createRestateIngress(clients.connect(connectOpts));
+                    },
                     inject: [RESTATE_OPTIONS],
                 },
                 RestateExplorer,
