@@ -708,6 +708,118 @@ describe("RestateModule", () => {
             stderrSpy.mockRestore();
             stdoutSpy.mockRestore();
         });
+
+        it("should send Authorization header when adminAuthToken is provided", async () => {
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        adminAuthToken: "my-secret-token",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            expect(fetchSpy).toHaveBeenCalledOnce();
+            const [, options] = fetchSpy.mock.calls[0];
+            expect(options.headers["Authorization"]).toBe("Bearer my-secret-token");
+
+            await app.close();
+        });
+
+        it("should not send Authorization header when adminAuthToken is not provided", async () => {
+            fetchSpy.mockResolvedValue({
+                ok: true,
+                status: 201,
+                text: () => Promise.resolve(""),
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            expect(fetchSpy).toHaveBeenCalledOnce();
+            const [, options] = fetchSpy.mock.calls[0];
+            expect(options.headers["Authorization"]).toBeUndefined();
+
+            await app.close();
+        });
+
+        it("should send Authorization header on production mode GET pre-check", async () => {
+            fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+                if (!opts || !opts.method || opts.method === "GET") {
+                    return {
+                        ok: true,
+                        json: () =>
+                            Promise.resolve({
+                                deployments: [
+                                    {
+                                        uri: "http://my-host:9080",
+                                        metadata: {
+                                            "nestjs-restate.interface-hash": "sha256:matching-hash",
+                                        },
+                                    },
+                                ],
+                            }),
+                    };
+                }
+                return { ok: true, status: 201, text: () => Promise.resolve("") };
+            });
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: "http://localhost:9070",
+                        adminAuthToken: "cloud-token",
+                        endpoint: { port: 0 },
+                        autoRegister: {
+                            deploymentUrl: "http://my-host:9080",
+                            mode: "production",
+                        },
+                    }),
+                ],
+                providers: [TestSvc],
+            }).compile();
+
+            const app = module.createNestApplication();
+            await app.init();
+
+            const getCall = fetchSpy.mock.calls.find(
+                (c: any[]) => !c[1]?.method || c[1]?.method === "GET",
+            );
+            expect(getCall).toBeDefined();
+            expect(getCall![1]?.headers?.["Authorization"]).toBe("Bearer cloud-token");
+
+            await app.close();
+        });
     });
 
     describe("endpoint configuration", () => {

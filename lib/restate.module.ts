@@ -131,6 +131,17 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         await this.endpointManager.stop();
     }
 
+    private buildAdminHeaders(contentType?: string): Record<string, string> {
+        const headers: Record<string, string> = {};
+        if (contentType) {
+            headers["Content-Type"] = contentType;
+        }
+        if (this.options.adminAuthToken) {
+            headers["Authorization"] = `Bearer ${this.options.adminAuthToken}`;
+        }
+        return headers;
+    }
+
     private async registerDeployment(): Promise<void> {
         const { autoRegister, admin } = this.options;
 
@@ -162,7 +173,9 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         if (mode === "production") {
             try {
                 const getUrl = `${admin}/deployments`;
-                const getResponse = await fetch(getUrl);
+                const getResponse = await fetch(getUrl, {
+                    headers: this.buildAdminHeaders(),
+                });
                 if (getResponse.ok) {
                     const data: any = await getResponse.json();
                     const deployments = data.deployments ?? data;
@@ -203,7 +216,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
             const response = await fetch(url, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: this.buildAdminHeaders("application/json"),
                 body,
             });
 
