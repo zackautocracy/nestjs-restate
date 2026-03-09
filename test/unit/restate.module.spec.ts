@@ -1094,4 +1094,217 @@ describe("RestateModule", () => {
             await module.close();
         });
     });
+
+    describe("structured ingress config", () => {
+        it("should accept ingress as an object with url and headers via forRoot", async () => {
+            const connectMock = vi.mocked(clients.connect);
+            connectMock.mockClear();
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: {
+                            url: "http://cloud:8080",
+                            headers: { Authorization: "Bearer obj-token" },
+                        },
+                        endpoint: { port: 0 },
+                    }),
+                ],
+            }).compile();
+
+            expect(connectMock).toHaveBeenCalledWith({
+                url: "http://cloud:8080",
+                headers: { Authorization: "Bearer obj-token" },
+            });
+
+            await module.close();
+        });
+
+        it("should accept ingress as an object via forRootAsync", async () => {
+            const connectMock = vi.mocked(clients.connect);
+            connectMock.mockClear();
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRootAsync({
+                        useFactory: () => ({
+                            ingress: {
+                                url: "http://cloud:8080",
+                                headers: { Authorization: "Bearer async-obj-token" },
+                            },
+                            endpoint: { port: 0 },
+                        }),
+                    }),
+                ],
+            }).compile();
+
+            expect(connectMock).toHaveBeenCalledWith({
+                url: "http://cloud:8080",
+                headers: { Authorization: "Bearer async-obj-token" },
+            });
+
+            await module.close();
+        });
+
+        it("should accept ingress object without headers", async () => {
+            const connectMock = vi.mocked(clients.connect);
+            connectMock.mockClear();
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: { url: "http://cloud:8080" },
+                        endpoint: { port: 0 },
+                    }),
+                ],
+            }).compile();
+
+            expect(connectMock).toHaveBeenCalledWith({
+                url: "http://cloud:8080",
+            });
+
+            await module.close();
+        });
+
+        it("should warn and ignore ingressHeaders when ingress is an object", async () => {
+            const warnSpy = vi.spyOn(RestateModule["logger"], "warn");
+
+            const module = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: {
+                            url: "http://cloud:8080",
+                            headers: { Authorization: "Bearer obj-token" },
+                        },
+                        ingressHeaders: { "X-Ignored": "true" },
+                        endpoint: { port: 0 },
+                    }),
+                ],
+            }).compile();
+
+            expect(warnSpy).toHaveBeenCalledWith(
+                "ingressHeaders is ignored when ingress is an object — use ingress.headers instead",
+            );
+
+            warnSpy.mockRestore();
+            await module.close();
+        });
+    });
+
+    describe("structured admin config", () => {
+        const fetchSpy = vi.fn();
+
+        beforeEach(() => {
+            fetchSpy.mockReset();
+            vi.stubGlobal(
+                "fetch",
+                fetchSpy.mockResolvedValue({
+                    status: 201,
+                    ok: true,
+                    json: async () => ({}),
+                    text: async () => "",
+                }),
+            );
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        it("should send auth header when admin is an object with authToken", async () => {
+            @Service("admin-obj-svc")
+            class AdminObjSvc {
+                @Handler()
+                async handle() {}
+            }
+
+            const app = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: {
+                            url: "http://localhost:9070",
+                            authToken: "cloud-token",
+                        },
+                        endpoint: { port: 0 },
+                        autoRegister: { deploymentUrl: "http://host:9080" },
+                    }),
+                ],
+            }).compile();
+
+            await app.init();
+
+            const postCall = fetchSpy.mock.calls.find(
+                ([, opts]: [string, RequestInit]) => opts?.method === "POST",
+            );
+            expect(postCall).toBeDefined();
+            const headers = postCall![1].headers as Record<string, string>;
+            expect(headers.Authorization).toBe("Bearer cloud-token");
+
+            await app.close();
+        });
+
+        it("should warn and ignore adminAuthToken when admin is an object", async () => {
+            const warnSpy = vi.spyOn(RestateModule["logger"], "warn");
+
+            @Service("admin-warn-svc")
+            class AdminWarnSvc {
+                @Handler()
+                async handle() {}
+            }
+
+            const app = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: {
+                            url: "http://localhost:9070",
+                            authToken: "obj-token",
+                        },
+                        adminAuthToken: "flat-token",
+                        endpoint: { port: 0 },
+                        autoRegister: { deploymentUrl: "http://host:9080" },
+                    }),
+                ],
+            }).compile();
+
+            await app.init();
+
+            expect(warnSpy).toHaveBeenCalledWith(
+                "adminAuthToken is ignored when admin is an object — use admin.authToken instead",
+            );
+
+            warnSpy.mockRestore();
+            await app.close();
+        });
+
+        it("should use admin object url for deployment registration", async () => {
+            @Service("admin-url-svc")
+            class AdminUrlSvc {
+                @Handler()
+                async handle() {}
+            }
+
+            const app = await Test.createTestingModule({
+                imports: [
+                    RestateModule.forRoot({
+                        ingress: "http://localhost:8080",
+                        admin: { url: "http://cloud-admin:9070" },
+                        endpoint: { port: 0 },
+                        autoRegister: { deploymentUrl: "http://host:9080" },
+                    }),
+                ],
+            }).compile();
+
+            await app.init();
+
+            const postCall = fetchSpy.mock.calls.find(
+                ([, opts]: [string, RequestInit]) => opts?.method === "POST",
+            );
+            expect(postCall).toBeDefined();
+            expect(postCall![0]).toBe("http://cloud-admin:9070/deployments");
+
+            await app.close();
+        });
+    });
 });

@@ -21,7 +21,12 @@ import { createClientProxy } from "./proxy/client-proxy";
 import { getClientToken } from "./proxy/client-token";
 import { getRegisteredComponents } from "./registry/component-registry";
 import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants";
-import type { RestateModuleAsyncOptions, RestateModuleOptions } from "./restate.interfaces";
+import type {
+    AdminConfig,
+    IngressConfig,
+    RestateModuleAsyncOptions,
+    RestateModuleOptions,
+} from "./restate.interfaces";
 
 export function computeInterfaceHash(summary: ComponentSummary[]): string {
     const sorted = [...summary]
@@ -48,6 +53,31 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         private readonly options: RestateModuleOptions,
     ) {}
 
+    private static resolveIngress(options: RestateModuleOptions): IngressConfig {
+        if (typeof options.ingress === "object") {
+            if (options.ingressHeaders) {
+                RestateModule.logger.warn(
+                    "ingressHeaders is ignored when ingress is an object — use ingress.headers instead",
+                );
+            }
+            return options.ingress;
+        }
+        return { url: options.ingress, headers: options.ingressHeaders };
+    }
+
+    private static resolveAdmin(options: RestateModuleOptions): AdminConfig | undefined {
+        if (!options.admin) return undefined;
+        if (typeof options.admin === "object") {
+            if (options.adminAuthToken) {
+                RestateModule.logger.warn(
+                    "adminAuthToken is ignored when admin is an object — use admin.authToken instead",
+                );
+            }
+            return options.admin;
+        }
+        return { url: options.admin, authToken: options.adminAuthToken };
+    }
+
     private static createAutoClientProviders(): Provider[] {
         return [...getRegisteredComponents()].map((target) => ({
             provide: getClientToken(target),
@@ -58,6 +88,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
     static forRoot(options: RestateModuleOptions): DynamicModule {
         const clientProviders = RestateModule.createAutoClientProviders();
         const clientTokens = clientProviders.map((p) => (p as any).provide);
+        const ingress = RestateModule.resolveIngress(options);
         return {
             module: RestateModule,
             imports: [DiscoveryModule],
@@ -67,10 +98,10 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                     provide: RESTATE_CLIENT,
                     useFactory: () => {
                         const connectOpts: { url: string; headers?: Record<string, string> } = {
-                            url: options.ingress,
+                            url: ingress.url,
                         };
-                        if (options.ingressHeaders) {
-                            connectOpts.headers = options.ingressHeaders;
+                        if (ingress.headers) {
+                            connectOpts.headers = ingress.headers;
                         }
                         return createRestateIngress(clients.connect(connectOpts));
                     },
@@ -99,11 +130,12 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 {
                     provide: RESTATE_CLIENT,
                     useFactory: (opts: RestateModuleOptions) => {
+                        const ingress = RestateModule.resolveIngress(opts);
                         const connectOpts: { url: string; headers?: Record<string, string> } = {
-                            url: opts.ingress,
+                            url: ingress.url,
                         };
-                        if (opts.ingressHeaders) {
-                            connectOpts.headers = opts.ingressHeaders;
+                        if (ingress.headers) {
+                            connectOpts.headers = ingress.headers;
                         }
                         return createRestateIngress(clients.connect(connectOpts));
                     },
@@ -145,19 +177,20 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         await this.endpointManager.stop();
     }
 
-    private buildAdminHeaders(contentType?: string): Record<string, string> {
+    private buildAdminHeaders(admin: AdminConfig, contentType?: string): Record<string, string> {
         const headers: Record<string, string> = {};
         if (contentType) {
             headers["Content-Type"] = contentType;
         }
-        if (this.options.adminAuthToken) {
-            headers.Authorization = `Bearer ${this.options.adminAuthToken}`;
+        if (admin.authToken) {
+            headers.Authorization = `Bearer ${admin.authToken}`;
         }
         return headers;
     }
 
     private async registerDeployment(): Promise<void> {
-        const { autoRegister, admin } = this.options;
+        const admin = RestateModule.resolveAdmin(this.options);
+        const { autoRegister } = this.options;
 
         if (!autoRegister || !admin) {
             return;
@@ -186,9 +219,9 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         // Production mode pre-check: skip POST if deployment already registered with same hash
         if (mode === "production") {
             try {
-                const getUrl = `${admin}/deployments`;
+                const getUrl = `${admin.url}/deployments`;
                 const getResponse = await fetch(getUrl, {
-                    headers: this.buildAdminHeaders(),
+                    headers: this.buildAdminHeaders(admin),
                 });
                 if (getResponse.ok) {
                     const data: any = await getResponse.json();
@@ -207,7 +240,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                         existing?.endpoint?.metadata;
                     if (existing && existingMeta?.["nestjs-restate.interface-hash"] === hash) {
                         RestateModule.logger.log(
-                            `Deployment already registered at ${admin} (URI: ${deploymentUrl}), no changes detected`,
+                            `Deployment already registered at ${admin.url} (URI: ${deploymentUrl}), no changes detected`,
                         );
                         return;
                     }
@@ -221,7 +254,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         }
 
         try {
-            const url = `${admin}/deployments`;
+            const url = `${admin.url}/deployments`;
             const body = JSON.stringify({
                 uri: deploymentUrl,
                 force: effectiveForce,
@@ -230,22 +263,22 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
             const response = await fetch(url, {
                 method: "POST",
-                headers: this.buildAdminHeaders("application/json"),
+                headers: this.buildAdminHeaders(admin, "application/json"),
                 body,
             });
 
             if (response.status === 201) {
                 RestateModule.logger.log(
-                    `New deployment registered at ${admin} (URI: ${deploymentUrl})`,
+                    `New deployment registered at ${admin.url} (URI: ${deploymentUrl})`,
                 );
             } else if (response.status === 200) {
                 RestateModule.logger.log(
-                    `Deployment already registered at ${admin} (URI: ${deploymentUrl}), no changes detected`,
+                    `Deployment already registered at ${admin.url} (URI: ${deploymentUrl}), no changes detected`,
                 );
             } else if (response.status === 409) {
                 const text = await response.text();
                 RestateModule.logger.warn(
-                    `Deployment conflict at ${admin} — interface changed. Use a new deployment URL or set force: true. ${text}`.trim(),
+                    `Deployment conflict at ${admin.url} — interface changed. Use a new deployment URL or set force: true. ${text}`.trim(),
                 );
             } else {
                 const text = await response.text();

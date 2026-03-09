@@ -97,9 +97,11 @@ export { getComponentMeta, isRestateComponent } from "./registry/component-metad
 export { RESTATE_CLIENT } from "./restate.constants";
 // Types
 export type {
+    AdminConfig,
     AnyHandlerOpts,
     AutoRegisterOptions,
     EndpointConfig,
+    IngressConfig,
     PipelineOptions,
     ResolvedServiceComponentMetadata,
     ResolvedVirtualObjectComponentMetadata,
