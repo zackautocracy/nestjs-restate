@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.1](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.6.0...nestjs-restate-v2.6.1) (2026-03-09)
+
+
+### Bug Fixes
+
+* cloud auth support & structured connection config ([#20](https://github.com/zackautocracy/nestjs-restate/issues/20)) ([712d537](https://github.com/zackautocracy/nestjs-restate/commit/712d53771d8c8fbf1573f7fae2cf1339732eadc7))
+
 ## [2.6.0](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.5.0...nestjs-restate-v2.6.0) (2026-03-07)
 
 
