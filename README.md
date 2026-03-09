@@ -638,7 +638,7 @@ RestateModule.forRoot({
 | `adminAuthToken` | Bearer token for Restate admin API | `autoRegister` deployment registration |
 | `ingressHeaders` | Custom headers for ingress client | All service/object/workflow client calls |
 
-> **Env var convention:** Restate's CLI uses `RESTATE_AUTH_TOKEN` for the same purpose ([CLI config docs](https://docs.restate.dev/references/cli-config)).
+To obtain your authentication token, log in via the [Restate Cloud dashboard](https://cloud.restate.dev) or run `restate cloud login` with the [Restate CLI](https://docs.restate.dev/references/cli).
 
 ### Component-Level Options
 
