@@ -64,8 +64,20 @@ export interface RestateErrorOptions {
 export interface RestateModuleOptions {
     /** Restate server ingress URL (e.g., http://restate:8080) */
     ingress: string;
+    /**
+     * Custom headers sent with all ingress client calls.
+     * Use for authentication with Restate Cloud (e.g., `{ Authorization: 'Bearer <token>' }`).
+     * Passed through to the SDK's `clients.connect()` options.
+     */
+    ingressHeaders?: Record<string, string>;
     /** Restate admin URL for auto-registration (e.g., http://restate:9070) */
     admin?: string;
+    /**
+     * Bearer token for authenticating with the Restate admin API.
+     * Required when using Restate Cloud.
+     * Sent as `Authorization: Bearer <token>` on all admin API calls (e.g., auto-registration).
+     */
+    adminAuthToken?: string;
     /** HTTP/2 endpoint configuration */
     endpoint: EndpointConfig;
     /** Auto-register deployment with Restate server on startup */
