@@ -1167,6 +1167,7 @@ describe("RestateModule", () => {
         });
 
         it("should warn and ignore ingressHeaders when ingress is an object", async () => {
+            // biome-ignore lint/complexity/useLiteralKeys: accessing private static for testing
             const warnSpy = vi.spyOn(RestateModule["logger"], "warn");
 
             const module = await Test.createTestingModule({
@@ -1194,6 +1195,12 @@ describe("RestateModule", () => {
     describe("structured admin config", () => {
         const fetchSpy = vi.fn();
 
+        @Service("admin-struct-svc")
+        class AdminStructSvc {
+            @Handler()
+            async handle() {}
+        }
+
         beforeEach(() => {
             fetchSpy.mockReset();
             vi.stubGlobal(
@@ -1212,12 +1219,6 @@ describe("RestateModule", () => {
         });
 
         it("should send auth header when admin is an object with authToken", async () => {
-            @Service("admin-obj-svc")
-            class AdminObjSvc {
-                @Handler()
-                async handle() {}
-            }
-
             const app = await Test.createTestingModule({
                 imports: [
                     RestateModule.forRoot({
@@ -1230,28 +1231,22 @@ describe("RestateModule", () => {
                         autoRegister: { deploymentUrl: "http://host:9080" },
                     }),
                 ],
+                providers: [AdminStructSvc],
             }).compile();
 
-            await app.init();
+            const nestApp = app.createNestApplication();
+            await nestApp.init();
 
-            const postCall = fetchSpy.mock.calls.find(
-                ([, opts]: [string, RequestInit]) => opts?.method === "POST",
-            );
-            expect(postCall).toBeDefined();
-            const headers = postCall![1].headers as Record<string, string>;
-            expect(headers.Authorization).toBe("Bearer cloud-token");
+            expect(fetchSpy).toHaveBeenCalledOnce();
+            const [, options] = fetchSpy.mock.calls[0];
+            expect(options.headers.Authorization).toBe("Bearer cloud-token");
 
-            await app.close();
+            await nestApp.close();
         });
 
         it("should warn and ignore adminAuthToken when admin is an object", async () => {
+            // biome-ignore lint/complexity/useLiteralKeys: accessing private static for testing
             const warnSpy = vi.spyOn(RestateModule["logger"], "warn");
-
-            @Service("admin-warn-svc")
-            class AdminWarnSvc {
-                @Handler()
-                async handle() {}
-            }
 
             const app = await Test.createTestingModule({
                 imports: [
@@ -1266,25 +1261,21 @@ describe("RestateModule", () => {
                         autoRegister: { deploymentUrl: "http://host:9080" },
                     }),
                 ],
+                providers: [AdminStructSvc],
             }).compile();
 
-            await app.init();
+            const nestApp = app.createNestApplication();
+            await nestApp.init();
 
             expect(warnSpy).toHaveBeenCalledWith(
                 "adminAuthToken is ignored when admin is an object — use admin.authToken instead",
             );
 
             warnSpy.mockRestore();
-            await app.close();
+            await nestApp.close();
         });
 
         it("should use admin object url for deployment registration", async () => {
-            @Service("admin-url-svc")
-            class AdminUrlSvc {
-                @Handler()
-                async handle() {}
-            }
-
             const app = await Test.createTestingModule({
                 imports: [
                     RestateModule.forRoot({
@@ -1294,17 +1285,17 @@ describe("RestateModule", () => {
                         autoRegister: { deploymentUrl: "http://host:9080" },
                     }),
                 ],
+                providers: [AdminStructSvc],
             }).compile();
 
-            await app.init();
+            const nestApp = app.createNestApplication();
+            await nestApp.init();
 
-            const postCall = fetchSpy.mock.calls.find(
-                ([, opts]: [string, RequestInit]) => opts?.method === "POST",
-            );
-            expect(postCall).toBeDefined();
-            expect(postCall![0]).toBe("http://cloud-admin:9070/deployments");
+            expect(fetchSpy).toHaveBeenCalledOnce();
+            const [url] = fetchSpy.mock.calls[0];
+            expect(url).toBe("http://cloud-admin:9070/deployments");
 
-            await app.close();
+            await nestApp.close();
         });
     });
 });
