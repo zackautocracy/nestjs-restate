@@ -151,7 +151,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
             headers["Content-Type"] = contentType;
         }
         if (this.options.adminAuthToken) {
-            headers["Authorization"] = `Bearer ${this.options.adminAuthToken}`;
+            headers.Authorization = `Bearer ${this.options.adminAuthToken}`;
         }
         return headers;
     }

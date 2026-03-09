@@ -745,7 +745,7 @@ describe("RestateModule", () => {
 
             expect(fetchSpy).toHaveBeenCalledOnce();
             const [, options] = fetchSpy.mock.calls[0];
-            expect(options.headers["Authorization"]).toBe("Bearer my-secret-token");
+            expect(options.headers.Authorization).toBe("Bearer my-secret-token");
 
             await app.close();
         });
@@ -776,7 +776,7 @@ describe("RestateModule", () => {
 
             expect(fetchSpy).toHaveBeenCalledOnce();
             const [, options] = fetchSpy.mock.calls[0];
-            expect(options.headers["Authorization"]).toBeUndefined();
+            expect(options.headers.Authorization).toBeUndefined();
 
             await app.close();
         });
@@ -825,7 +825,7 @@ describe("RestateModule", () => {
                 (c: any[]) => !c[1]?.method || c[1]?.method === "GET",
             );
             expect(getCall).toBeDefined();
-            expect(getCall![1]?.headers?.["Authorization"]).toBe("Bearer cloud-token");
+            expect(getCall?.[1]?.headers?.Authorization).toBe("Bearer cloud-token");
 
             await app.close();
         });
