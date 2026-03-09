@@ -555,8 +555,12 @@ import {
 ```typescript
 RestateModule.forRoot({
     ingress: 'http://localhost:8080',          // Restate ingress URL
+    ingressHeaders: {                         // Custom headers for ingress calls (see Restate Cloud)
+        Authorization: 'Bearer <token>',
+    },
     endpoint: { port: 9080 },                 // HTTP/2 endpoint (see Endpoint Modes below)
     admin: 'http://localhost:9070',            // Admin API (for auto-registration)
+    adminAuthToken: '<token>',                // Bearer token for admin API (see Restate Cloud)
     autoRegister: {                           // Auto-register deployment on startup
         deploymentUrl: 'http://host.docker.internal:9080',
         force: true,                          // Overwrite existing (default: true)
@@ -609,6 +613,32 @@ endpoint: { type: 'lambda' }       // AWS Lambda (no server)
 ```
 
 > **Why a separate HTTP/2 server?** Restate uses a binary protocol over HTTP/2 bidirectional streaming that can't be mounted as Express/Fastify middleware.
+
+### Restate Cloud
+
+When using [Restate Cloud](https://restate.dev/cloud/), admin and ingress API calls require authentication:
+
+```typescript
+RestateModule.forRoot({
+    ingress: process.env.RESTATE_INGRESS_URL,
+    admin: process.env.RESTATE_ADMIN_URL,
+    adminAuthToken: process.env.RESTATE_AUTH_TOKEN,
+    ingressHeaders: {
+        Authorization: `Bearer ${process.env.RESTATE_AUTH_TOKEN}`,
+    },
+    endpoint: { port: 9080 },
+    autoRegister: {
+        deploymentUrl: process.env.RESTATE_DEPLOYMENT_URL,
+    },
+})
+```
+
+| Option | Purpose | Affects |
+|--------|---------|--------|
+| `adminAuthToken` | Bearer token for Restate admin API | `autoRegister` deployment registration |
+| `ingressHeaders` | Custom headers for ingress client | All service/object/workflow client calls |
+
+> **Env var convention:** Restate's CLI uses `RESTATE_AUTH_TOKEN` for the same purpose ([CLI config docs](https://docs.restate.dev/references/cli-config)).
 
 ### Component-Level Options
 

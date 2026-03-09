@@ -9,6 +9,9 @@ import { PaymentModule } from "./payment/payment.module";
         RestateModule.forRoot({
             ingress: "http://localhost:8080",
             admin: "http://localhost:9070",
+            // For Restate Cloud, uncomment:
+            // adminAuthToken: process.env.RESTATE_AUTH_TOKEN,
+            // ingressHeaders: { Authorization: `Bearer ${process.env.RESTATE_AUTH_TOKEN}` },
             endpoint: { port: 9080 },
             autoRegister: {
                 deploymentUrl: "http://host.docker.internal:9080",
