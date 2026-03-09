@@ -183,7 +183,8 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
             headers["Content-Type"] = contentType;
         }
         if (admin.authToken) {
-            headers.Authorization = `Bearer ${admin.authToken}`;
+            // biome-ignore lint/complexity/useLiteralKeys: TS noPropertyAccessFromIndexSignature requires bracket notation on Record
+            headers["Authorization"] = `Bearer ${admin.authToken}`;
         }
         return headers;
     }
