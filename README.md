@@ -786,8 +786,8 @@ Each `DeploymentChange` describes one component:
 interface DeploymentChange {
     serviceName: string;
     type: 'service' | 'virtualObject' | 'workflow' | 'unknown';
-    oldMetadata: Record<string, string> | null;  // null = new component
-    newMetadata: Record<string, string> | null;  // null = removed component
+    oldMetadata: Record<string, string> | null;  // null = no metadata entry in current deployment
+    newMetadata: Record<string, string> | null;  // null = no metadata entry in new version
 }
 ```
 

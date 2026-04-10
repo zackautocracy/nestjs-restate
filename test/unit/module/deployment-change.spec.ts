@@ -634,4 +634,63 @@ describe("deployment change detection", () => {
 
         await app.close();
     });
+
+    it("should not trigger hook when metadata keys are reordered", async () => {
+        const hookFn = vi.fn();
+
+        // Old metadata has keys in one order, new metadata has them in another
+        fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+            if (!opts?.method || opts.method === "GET") {
+                return {
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            deployments: [
+                                {
+                                    uri: "http://host:9080",
+                                    metadata: {
+                                        "nestjs-restate.component-metadata": JSON.stringify({
+                                            order: { revision: "1" },
+                                            payment: { team: "billing", version: "2.0" },
+                                        }),
+                                    },
+                                },
+                            ],
+                        }),
+                };
+            }
+            return { ok: true, status: 201, text: () => Promise.resolve("") };
+        });
+
+        @Service({ name: "payment", metadata: { version: "2.0", team: "billing" } })
+        class PaymentReordered {
+            @Handler()
+            async charge() {
+                return "ok";
+            }
+        }
+
+        const module = await Test.createTestingModule({
+            imports: [
+                RestateModule.forRoot({
+                    ingress: "http://localhost:8080",
+                    admin: "http://localhost:9070",
+                    endpoint: { port: 0 },
+                    autoRegister: {
+                        deploymentUrl: "http://host:9080",
+                        onDeploymentChange: hookFn,
+                    },
+                }),
+            ],
+            providers: [OrderWorkflow, PaymentReordered],
+        }).compile();
+
+        const app = module.createNestApplication();
+        await app.init();
+
+        // Hook should not be called: metadata is semantically identical despite key reordering
+        expect(hookFn).not.toHaveBeenCalled();
+
+        await app.close();
+    });
 });

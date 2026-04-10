@@ -29,6 +29,17 @@ import type {
     RestateModuleOptions,
 } from "./restate.interfaces";
 
+function stableStringify(obj: Record<string, string> | null): string | null {
+    if (obj === null) return null;
+    const sorted = Object.keys(obj)
+        .sort()
+        .reduce<Record<string, string>>((acc, key) => {
+            acc[key] = obj[key];
+            return acc;
+        }, {});
+    return JSON.stringify(sorted);
+}
+
 export function computeInterfaceHash(summary: ComponentSummary[]): string {
     const sorted = [...summary]
         .sort((a, b) => a.componentName.localeCompare(b.componentName))
@@ -345,7 +356,10 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         let oldMap: Record<string, Record<string, string>> = {};
         if (oldMetadataJson) {
             try {
-                oldMap = JSON.parse(oldMetadataJson);
+                const parsed = JSON.parse(oldMetadataJson);
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                    oldMap = parsed;
+                }
             } catch {
                 RestateModule.logger.warn(
                     "Failed to parse old component metadata, treating as empty",
@@ -360,8 +374,8 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
             const oldMeta = oldMap[name] ?? null;
             const newMeta = newMetadataMap[name] ?? null;
 
-            // Skip if both are the same (including both null)
-            if (JSON.stringify(oldMeta) === JSON.stringify(newMeta)) continue;
+            // Compare with sorted keys so {a:'1',b:'2'} equals {b:'2',a:'1'}
+            if (stableStringify(oldMeta) === stableStringify(newMeta)) continue;
 
             // Determine component type from current discovery
             const summary = this.componentSummary.find((cs) => cs.componentName === name);
