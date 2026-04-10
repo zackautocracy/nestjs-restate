@@ -723,4 +723,60 @@ describe("RestateExplorer", () => {
             });
         });
     });
+
+    describe("component metadata", () => {
+        it("should include metadata from @Workflow decorator in componentSummary", () => {
+            @Workflow({ name: "versioned-wf", metadata: { revision: "1" } })
+            class VersionedWorkflow {
+                @Run()
+                async run() {
+                    return "done";
+                }
+            }
+
+            const instance = new VersionedWorkflow();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = createRestateExplorer(discoveryService);
+            const { componentSummary } = explorer.discover();
+
+            expect(componentSummary).toHaveLength(1);
+            expect(componentSummary[0].metadata).toEqual({ revision: "1" });
+        });
+
+        it("should include metadata from @Service decorator in componentSummary", () => {
+            @Service({ name: "versioned-svc", metadata: { version: "2.0" } })
+            class VersionedService {
+                @Handler()
+                async handle() {
+                    return "ok";
+                }
+            }
+
+            const instance = new VersionedService();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = createRestateExplorer(discoveryService);
+            const { componentSummary } = explorer.discover();
+
+            expect(componentSummary).toHaveLength(1);
+            expect(componentSummary[0].metadata).toEqual({ version: "2.0" });
+        });
+
+        it("should leave metadata undefined when decorator has no metadata", () => {
+            @Service("plain-svc")
+            class PlainService {
+                @Handler()
+                async handle() {
+                    return "ok";
+                }
+            }
+
+            const instance = new PlainService();
+            const discoveryService = createMockDiscoveryService([instance]);
+            const explorer = createRestateExplorer(discoveryService);
+            const { componentSummary } = explorer.discover();
+
+            expect(componentSummary).toHaveLength(1);
+            expect(componentSummary[0].metadata).toBeUndefined();
+        });
+    });
 });

@@ -100,6 +100,7 @@ export type {
     AdminConfig,
     AnyHandlerOpts,
     AutoRegisterOptions,
+    DeploymentChange,
     EndpointConfig,
     IngressConfig,
     PipelineOptions,

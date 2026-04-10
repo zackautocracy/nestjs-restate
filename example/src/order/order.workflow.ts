@@ -22,7 +22,7 @@ import type { OrderRequest, OrderResult } from "../shared/interfaces";
  *   - ctx.key for workflow identity
  *   - NestJS Logger for replay-safe logging (automatic, no setup)
  */
-@Workflow("order")
+@Workflow({ name: "order", metadata: { revision: "1" } })
 export class OrderWorkflow {
     private readonly logger = new Logger(OrderWorkflow.name);
 

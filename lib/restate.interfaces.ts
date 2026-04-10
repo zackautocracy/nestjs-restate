@@ -54,6 +54,26 @@ export interface AutoRegisterOptions {
      * @example { version: '1.2.0', commit: 'abc1234' }
      */
     metadata?: Record<string, string>;
+    /**
+     * Called before registration when component metadata differs between
+     * the existing deployment and the new one. Receives per-component diffs
+     * and admin connection info for making API calls (cancel, query, etc.).
+     *
+     * Throwing aborts registration.
+     *
+     * @example
+     * ```ts
+     * onDeploymentChange: async (changes, admin) => {
+     *   for (const c of changes) {
+     *     console.log(`${c.serviceName}: ${JSON.stringify(c.oldMetadata)} → ${JSON.stringify(c.newMetadata)}`);
+     *   }
+     * }
+     * ```
+     */
+    onDeploymentChange?: (
+        changes: DeploymentChange[],
+        admin: { url: string; authToken?: string },
+    ) => void | Promise<void>;
 }
 
 export interface RestateErrorOptions {
@@ -128,6 +148,17 @@ export interface PipelineOptions {
     interceptors?: boolean;
     /** Enable exception filters for Restate handlers. Default: `true`. */
     filters?: boolean;
+}
+
+export interface DeploymentChange {
+    /** Restate-registered component name (e.g., "order") */
+    serviceName: string;
+    /** Component type ("unknown" for removed components not in current discovery) */
+    type: "service" | "workflow" | "virtualObject" | "unknown";
+    /** Metadata from the currently deployed version (null if new component) */
+    oldMetadata: Record<string, string> | null;
+    /** Metadata from the version about to be deployed (null if component removed) */
+    newMetadata: Record<string, string> | null;
 }
 
 export interface RestateModuleAsyncOptions {
