@@ -23,17 +23,29 @@ import { getRegisteredComponents } from "./registry/component-registry";
 import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants";
 import type {
     AdminConfig,
+    DeploymentMetadataChange,
     IngressConfig,
     RestateModuleAsyncOptions,
     RestateModuleOptions,
 } from "./restate.interfaces";
 
+function stableStringify(obj: Record<string, string> | null): string | null {
+    if (obj === null) return null;
+    const sorted = Object.keys(obj)
+        .sort()
+        .reduce<Record<string, string>>((acc, key) => {
+            acc[key] = obj[key];
+            return acc;
+        }, {});
+    return JSON.stringify(sorted);
+}
+
 export function computeInterfaceHash(summary: ComponentSummary[]): string {
     const sorted = [...summary]
         .sort((a, b) => a.componentName.localeCompare(b.componentName))
-        .map((c) => ({
-            ...c,
-            handlers: [...c.handlers].sort((a, b) => a.name.localeCompare(b.name)),
+        .map(({ metadata, ...rest }) => ({
+            ...rest,
+            handlers: [...rest.handlers].sort((a, b) => a.name.localeCompare(b.name)),
         }));
     const json = JSON.stringify(sorted);
     const hash = createHash("sha256").update(json).digest("hex");
@@ -43,7 +55,8 @@ export function computeInterfaceHash(summary: ComponentSummary[]): string {
 @Global()
 @Module({})
 export class RestateModule implements OnModuleInit, OnModuleDestroy {
-    private static readonly logger = new Logger(RestateModule.name);
+    private static readonly logger = new Logger("RestateModule");
+    private static readonly deploymentLogger = new Logger("RestateDeployment");
     private componentSummary: ComponentSummary[] = [];
 
     constructor(
@@ -200,7 +213,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         const listeningPort = this.endpointManager.getListeningPort();
 
         if (autoRegister.deploymentUrl.includes("{{port}}") && listeningPort === null) {
-            RestateModule.logger.warn(
+            RestateModule.deploymentLogger.warn(
                 "autoRegister.deploymentUrl contains {{port}} placeholder but no port is available (lambda mode or no services). Skipping registration.",
             );
             return;
@@ -212,13 +225,29 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
             autoRegister.force !== undefined ? autoRegister.force : mode !== "production";
 
         const hash = computeInterfaceHash(this.componentSummary);
+
+        // Collect per-component metadata into a JSON blob
+        const componentMetadataMap: Record<string, Record<string, string>> = {};
+        for (const cs of this.componentSummary) {
+            if (cs.metadata && Object.keys(cs.metadata).length > 0) {
+                componentMetadataMap[cs.componentName] = cs.metadata;
+            }
+        }
+
         const metadata: Record<string, string> = {
             ...autoRegister.metadata,
             "nestjs-restate.interface-hash": hash,
         };
+        if (Object.keys(componentMetadataMap).length > 0) {
+            metadata["nestjs-restate.component-metadata"] = JSON.stringify(componentMetadataMap);
+        }
 
-        // Production mode pre-check: skip POST if deployment already registered with same hash
-        if (mode === "production") {
+        // Unified GET: serves both hook diff and production pre-check
+        const needsGet = autoRegister.onDeploymentMetadataChange || mode === "production";
+        let metadataChangesDetected = false;
+        let existingHashMatches = false;
+
+        if (needsGet) {
             try {
                 const getUrl = `${admin.url}/deployments`;
                 const getResponse = await fetch(getUrl, {
@@ -227,38 +256,70 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 if (getResponse.ok) {
                     const data: any = await getResponse.json();
                     const deployments = data.deployments ?? data;
+                    const normalizeUri = (uri: string) => uri.replace(/\/+$/, "");
+                    const normalizedDeploymentUrl = normalizeUri(deploymentUrl);
                     const existing = Array.isArray(deployments)
                         ? deployments.find(
                               (d: any) =>
-                                  d.uri === deploymentUrl ||
-                                  d.deployment?.uri === deploymentUrl ||
-                                  d.endpoint?.uri === deploymentUrl,
+                                  normalizeUri(d.uri ?? "") === normalizedDeploymentUrl ||
+                                  normalizeUri(d.deployment?.uri ?? "") ===
+                                      normalizedDeploymentUrl ||
+                                  normalizeUri(d.endpoint?.uri ?? "") === normalizedDeploymentUrl,
                           )
                         : undefined;
                     const existingMeta =
                         existing?.metadata ??
                         existing?.deployment?.metadata ??
                         existing?.endpoint?.metadata;
-                    if (existing && existingMeta?.["nestjs-restate.interface-hash"] === hash) {
-                        RestateModule.logger.log(
-                            `Deployment already registered at ${admin.url} (URI: ${deploymentUrl}), no changes detected`,
-                        );
-                        return;
+
+                    // Check interface hash for production pre-check
+                    if (existingMeta?.["nestjs-restate.interface-hash"] === hash) {
+                        existingHashMatches = true;
+                    }
+
+                    // Diff component metadata
+                    const changes = this.diffComponentMetadata(
+                        existingMeta?.["nestjs-restate.component-metadata"],
+                        componentMetadataMap,
+                    );
+
+                    if (changes.length > 0) {
+                        metadataChangesDetected = true;
+                        if (autoRegister.onDeploymentMetadataChange) {
+                            try {
+                                await autoRegister.onDeploymentMetadataChange(changes, {
+                                    url: admin.url,
+                                    authToken: admin.authToken,
+                                });
+                            } catch (hookError: any) {
+                                RestateModule.deploymentLogger.error(
+                                    `onDeploymentMetadataChange hook threw — aborting registration: ${hookError?.message ?? hookError}`,
+                                );
+                                return;
+                            }
+                        }
                     }
                 }
             } catch (error: any) {
-                // GET failed — fall through to POST
-                RestateModule.logger.debug(
+                RestateModule.deploymentLogger.debug(
                     `Pre-check GET /deployments failed (${error?.message ?? error}), falling through to POST`,
                 );
             }
+        }
+
+        // Production skip-check: skip POST only if hash matches AND no metadata changes
+        if (mode === "production" && existingHashMatches && !metadataChangesDetected) {
+            RestateModule.deploymentLogger.log(
+                `Deployment unchanged at ${admin.url} (URI: ${deploymentUrl}), skipping registration`,
+            );
+            return;
         }
 
         try {
             const url = `${admin.url}/deployments`;
             const body = JSON.stringify({
                 uri: deploymentUrl,
-                force: effectiveForce,
+                force: effectiveForce || metadataChangesDetected,
                 metadata,
             });
 
@@ -269,26 +330,71 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
             });
 
             if (response.status === 201) {
-                RestateModule.logger.log(
+                RestateModule.deploymentLogger.log(
                     `New deployment registered at ${admin.url} (URI: ${deploymentUrl})`,
                 );
             } else if (response.status === 200) {
-                RestateModule.logger.log(
-                    `Deployment already registered at ${admin.url} (URI: ${deploymentUrl}), no changes detected`,
+                RestateModule.deploymentLogger.log(
+                    `Deployment re-registered at ${admin.url} (URI: ${deploymentUrl}), component interface unchanged`,
                 );
             } else if (response.status === 409) {
                 const text = await response.text();
-                RestateModule.logger.warn(
+                RestateModule.deploymentLogger.warn(
                     `Deployment conflict at ${admin.url} — interface changed. Use a new deployment URL or set force: true. ${text}`.trim(),
                 );
             } else {
                 const text = await response.text();
-                RestateModule.logger.warn(
+                RestateModule.deploymentLogger.warn(
                     `Failed to auto-register deployment: ${response.status} ${text}`,
                 );
             }
         } catch (error: any) {
-            RestateModule.logger.warn(`Failed to auto-register deployment: ${error.message}`);
+            RestateModule.deploymentLogger.warn(
+                `Failed to auto-register deployment: ${error.message}`,
+            );
         }
+    }
+
+    private diffComponentMetadata(
+        oldMetadataJson: string | undefined | null,
+        newMetadataMap: Record<string, Record<string, string>>,
+    ): DeploymentMetadataChange[] {
+        let oldMap: Record<string, Record<string, string>> = {};
+        if (oldMetadataJson) {
+            try {
+                const parsed = JSON.parse(oldMetadataJson);
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                    oldMap = parsed;
+                }
+            } catch {
+                RestateModule.deploymentLogger.warn(
+                    "Failed to parse old component metadata, treating as empty",
+                );
+            }
+        }
+
+        const changes: DeploymentMetadataChange[] = [];
+        const allNames = new Set([...Object.keys(oldMap), ...Object.keys(newMetadataMap)]);
+
+        for (const name of allNames) {
+            const oldMeta = oldMap[name] ?? null;
+            const newMeta = newMetadataMap[name] ?? null;
+
+            // Compare with sorted keys so {a:'1',b:'2'} equals {b:'2',a:'1'}
+            if (stableStringify(oldMeta) === stableStringify(newMeta)) continue;
+
+            // Determine component type from current discovery
+            const summary = this.componentSummary.find((cs) => cs.componentName === name);
+            const type = (summary?.componentType ?? "unknown") as DeploymentMetadataChange["type"];
+
+            changes.push({
+                serviceName: name,
+                type,
+                oldMetadata: oldMeta,
+                newMetadata: newMeta,
+            });
+        }
+
+        return changes;
     }
 }

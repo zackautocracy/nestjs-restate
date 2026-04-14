@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { Global, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import * as clients from "@restatedev/restate-sdk-clients";
+import type { ComponentSummary } from "nestjs-restate";
 import {
     Handler,
     RESTATE_CLIENT,
@@ -597,7 +598,7 @@ describe("RestateModule", () => {
 
             const logCalls200 = stdoutSpy.mock.calls
                 .map((c) => String(c[0]))
-                .filter((s) => s.includes("already registered"));
+                .filter((s) => s.includes("re-registered"));
             expect(logCalls200.length).toBeGreaterThan(0);
 
             await app2.close();
@@ -1296,6 +1297,59 @@ describe("RestateModule", () => {
             expect(url).toBe("http://cloud-admin:9070/deployments");
 
             await nestApp.close();
+        });
+
+        describe("interface hash stability", () => {
+            it("should produce the same hash with and without metadata", () => {
+                const summaryWithoutMeta: ComponentSummary[] = [
+                    {
+                        componentName: "order",
+                        componentType: "workflow",
+                        handlers: [
+                            { name: "run", type: "run" },
+                            { name: "status", type: "shared" },
+                        ],
+                    },
+                ];
+
+                const summaryWithMeta: ComponentSummary[] = [
+                    {
+                        componentName: "order",
+                        componentType: "workflow",
+                        handlers: [
+                            { name: "run", type: "run" },
+                            { name: "status", type: "shared" },
+                        ],
+                        metadata: { revision: "1" },
+                    },
+                ];
+
+                expect(computeInterfaceHash(summaryWithMeta)).toBe(
+                    computeInterfaceHash(summaryWithoutMeta),
+                );
+            });
+
+            it("should not change hash when only metadata changes", () => {
+                const summaryV1: ComponentSummary[] = [
+                    {
+                        componentName: "order",
+                        componentType: "workflow",
+                        handlers: [{ name: "run", type: "run" }],
+                        metadata: { revision: "1" },
+                    },
+                ];
+
+                const summaryV2: ComponentSummary[] = [
+                    {
+                        componentName: "order",
+                        componentType: "workflow",
+                        handlers: [{ name: "run", type: "run" }],
+                        metadata: { revision: "2" },
+                    },
+                ];
+
+                expect(computeInterfaceHash(summaryV1)).toBe(computeInterfaceHash(summaryV2));
+            });
         });
     });
 });

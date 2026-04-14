@@ -26,6 +26,7 @@ export interface ComponentSummary {
     componentName: string;
     componentType: string;
     handlers: Array<{ name: string; type: string }>;
+    metadata?: Record<string, string>;
 }
 
 export interface DiscoveryResult {
@@ -36,7 +37,7 @@ export interface DiscoveryResult {
 
 @Injectable()
 export class RestateExplorer {
-    private readonly logger = new Logger(RestateExplorer.name);
+    private readonly logger = new Logger("RestateDiscovery");
     private readonly restateParamsFactory = new RestateParamsFactory();
 
     constructor(
@@ -110,6 +111,7 @@ export class RestateExplorer {
                     componentName: workflowMeta.name,
                     componentType: "workflow",
                     handlers: handlers.map((h) => ({ name: h.methodName, type: h.type })),
+                    metadata: workflowMeta.metadata,
                 });
             } else if (serviceMeta) {
                 serviceClassNames.set(serviceMeta.name, instance.constructor.name);
@@ -119,6 +121,7 @@ export class RestateExplorer {
                     componentName: serviceMeta.name,
                     componentType: "service",
                     handlers: handlers.map((h) => ({ name: h.methodName, type: h.type })),
+                    metadata: serviceMeta.metadata,
                 });
             } else if (virtualObjectMeta) {
                 serviceClassNames.set(virtualObjectMeta.name, instance.constructor.name);
@@ -128,6 +131,7 @@ export class RestateExplorer {
                     componentName: virtualObjectMeta.name,
                     componentType: "virtualObject",
                     handlers: handlers.map((h) => ({ name: h.methodName, type: h.type })),
+                    metadata: virtualObjectMeta.metadata,
                 });
             }
         }

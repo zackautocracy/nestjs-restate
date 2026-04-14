@@ -11,7 +11,7 @@ import type {
 
 @Injectable()
 export class RestateEndpointManager {
-    private readonly logger = new Logger(RestateEndpointManager.name);
+    private readonly logger = new Logger("RestateEndpoint");
     private readonly definitions: any[] = [];
     private readonly sessions = new Set<http2.ServerHttp2Session>();
     private httpServer: http2.Http2Server | null = null;

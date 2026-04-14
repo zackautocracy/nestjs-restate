@@ -4,7 +4,7 @@
 
 <h1 align="center">nestjs-restate</h1>
 
-<p align="center">A first-class <a href="https://nestjs.com/">NestJS</a> integration for <a href="https://restate.dev/">Restate</a> — the durable execution engine.</p>
+<p align="center">A native <a href="https://nestjs.com/">NestJS</a> integration for <a href="https://restate.dev/">Restate</a>, the durable execution engine.</p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/nestjs-restate"><img src="https://img.shields.io/npm/v/nestjs-restate.svg" alt="NPM Version" /></a>
@@ -16,21 +16,22 @@
 
 ## Overview
 
-NestJS services don't survive crashes. If your app restarts mid-request, in-progress work is lost — partial payments, half-sent notifications, orphaned state.
+NestJS services don't survive crashes. If your app restarts mid-request, in-progress work is lost: partial payments, half-sent notifications, orphaned state.
 
-[Restate](https://restate.dev/) is a durable execution engine that fixes this. Every function call is persisted and automatically retried from where it left off — no manual retry logic, idempotency keys, or state machines. **nestjs-restate** brings Restate into NestJS as a first-class citizen with decorators, dependency injection, auto-discovery, and lifecycle management.
+[Restate](https://restate.dev/) is a durable execution engine that fixes this. Every function call is persisted and retried from where it left off. No manual retry logic, idempotency keys, or state machines. **nestjs-restate** gives you Restate in NestJS with decorators, dependency injection, auto-discovery, and lifecycle management.
 
 **What you get:**
 
-- **Decorator-driven** — `@Service()`, `@VirtualObject()`, `@Workflow()`, `@Handler()`
-- **Full DI support** — constructor injection works like any NestJS provider
-- **Injectable context** — `RestateContext` gives handler methods access to the Restate SDK context
-- **Typed service proxies** — call other Restate services with full type safety via `@InjectClient(ServiceClass)`
-- **Typed Ingress client** — call Restate services from REST controllers and cron jobs using decorated classes directly
-- **Auto-discovery** — decorated classes are registered automatically, no manual wiring
-- **NestJS execution pipeline** — guards, interceptors, pipes, and exception filters work on Restate handlers
-- **Replay-aware logging** — NestJS `Logger` calls are automatically silenced during replay
-- **SDK passthrough** — retry policies, timeouts, and handler options forwarded directly to the Restate SDK
+- **Decorator-driven:** `@Service()`, `@VirtualObject()`, `@Workflow()`, `@Handler()`
+- **Full DI support:** constructor injection works like any NestJS provider
+- **NestJS execution pipeline:** guards, interceptors, pipes, and exception filters work on Restate handlers
+- **Auto-discovery:** decorated classes are registered automatically, no manual wiring
+- **Injectable context:** `RestateContext` gives handler methods access to the Restate SDK context
+- **Typed service proxies:** call other Restate services with full type safety via `@InjectClient(ServiceClass)`
+- **Typed Ingress client:** call Restate services from REST controllers and cron jobs using decorated classes directly
+- **Replay-aware logging:** NestJS `Logger` calls are silenced during replay
+- **Auto-registration:** registers deployments with the Restate admin API on startup, with production hash checks and metadata change detection
+- **SDK passthrough:** retry policies, timeouts, and handler options forwarded directly to the Restate SDK
 
 ## Installation
 
@@ -110,7 +111,7 @@ export class PaymentService {
 
 > **How `ctx.run()` works**: Restate journals the result of each `ctx.run()` call. On retry, it replays the journaled result instead of re-executing the function. This is what makes side effects like payments and emails safe without manual idempotency keys.
 
-The Restate SDK context is not passed as a handler parameter. Instead, inject `RestateContext` via the constructor — it automatically resolves to the correct context for each request using `AsyncLocalStorage`.
+The Restate SDK context is not passed as a handler parameter. Instead, inject `RestateContext` via the constructor. It resolves to the correct context for each request using `AsyncLocalStorage`.
 
 ### 3. Register as a provider
 
@@ -121,7 +122,7 @@ The Restate SDK context is not passed as a handler parameter. Instead, inject `R
 export class PaymentModule {}
 ```
 
-Auto-discovery handles the rest — no manual registration with the Restate endpoint needed.
+Auto-discovery handles the rest. No manual registration with the Restate endpoint needed.
 
 ## Concepts
 
@@ -129,7 +130,7 @@ Restate has three component types. Each is defined as a regular NestJS class wit
 
 ### Services
 
-Stateless durable handlers. Handlers are durable — if the service crashes mid-execution, Restate automatically retries from the last checkpoint, not from the beginning. Use services for side effects like sending emails, charging payments, or calling external APIs.
+Stateless durable handlers. If the service crashes mid-execution, Restate retries from the last checkpoint, not from the beginning. Use services for side effects like sending emails, charging payments, or calling external APIs.
 
 ```typescript
 import { Service, Handler, RestateContext } from 'nestjs-restate';
@@ -152,7 +153,7 @@ export class NotificationService {
 
 ### Virtual Objects
 
-Stateful entities identified by a unique key. Each object instance gets its own key-value store managed by Restate — no external database needed. Exclusive handlers run one-at-a-time per key (consistency), while `@Shared()` handlers can run concurrently (reads).
+Stateful entities identified by a unique key. Each object instance gets its own key-value store managed by Restate. No external database needed. Exclusive handlers run one-at-a-time per key (consistency), while `@Shared()` handlers can run concurrently (reads).
 
 ```typescript
 import { VirtualObject, Handler, Shared, RestateContext } from 'nestjs-restate';
@@ -227,10 +228,10 @@ export class SignupWorkflow {
 Use workflows for: user onboarding, approval flows, order fulfillment, or any multi-step process that needs to wait for external events.
 
 **Key rules:**
-- Exactly **one** `@Run()` per workflow — the method **must** be named `run`
+- Exactly **one** `@Run()` per workflow. The method **must** be named `run`
 - `@Signal()` methods can be called concurrently while the workflow is running
 
-> **`@Signal()` vs `@Shared()` on workflows:** Both are concurrent handlers in the Restate SDK. Use `@Signal()` for methods that receive external input (resolving promises), and `@Shared()` for read-only queries (checking status). The distinction is semantic — they compile to the same handler type.
+> **`@Signal()` vs `@Shared()` on workflows:** Both are concurrent handlers in the Restate SDK. Use `@Signal()` for methods that receive external input (resolving promises), and `@Shared()` for read-only queries (checking status). The distinction is semantic; they compile to the same handler type.
 - Use `this.ctx.promise()` for durable signals between run and signal handlers
 
 ### Mental Model
@@ -239,7 +240,7 @@ If you know NestJS, you already know 80% of what you need:
 
 | You already know | Restate equivalent | What changes |
 |---|---|---|
-| `@Injectable()` service | `@Service()` | Handlers are durable — side effects wrapped in `ctx.run()` survive crashes |
+| `@Injectable()` service | `@Service()` | Handlers are durable. Side effects wrapped in `ctx.run()` survive crashes |
 | Stateless service + database | `@VirtualObject()` | State lives in Restate's built-in key-value store, not your DB |
 | Saga / multi-step job | `@Workflow()` | A durable process with signals, promises, and exactly-once completion |
 | `constructor(private svc: MyService)` | `@InjectClient(MyService)` | Type-safe RPC between Restate services via DI |
@@ -250,7 +251,7 @@ If you know NestJS, you already know 80% of what you need:
 
 ### From controllers and other NestJS code (Ingress)
 
-Use the Ingress client to call Restate services from REST controllers, cron jobs, or any NestJS provider. Pass the decorated class directly — no manual SDK definitions needed:
+Use the Ingress client to call Restate services from REST controllers, cron jobs, or any NestJS provider. Pass the decorated class directly:
 
 ```typescript
 import { Controller, Post, Body, Param } from '@nestjs/common';
@@ -276,7 +277,7 @@ export class ApiController {
 }
 ```
 
-The `Ingress` type is re-exported from `nestjs-restate` — pass your decorated classes directly, no manual SDK definitions needed.
+The `Ingress` type is re-exported from `nestjs-restate`.
 
 If you need a raw SDK-compatible definition (e.g., for use with the SDK's own `Ingress` directly), use the `definitionOf` utilities:
 
@@ -290,7 +291,7 @@ workflowDefinitionOf(SignupWorkflow);    // → { name: 'user-signup' }
 
 ### From handler to handler (typed proxies)
 
-Inside a Restate handler, inject a typed proxy to call other services. These calls go through Restate — they're durable, retried on failure, and journaled:
+Inside a Restate handler, inject a typed proxy to call other services. These calls go through Restate, so they're durable, retried on failure, and journaled:
 
 ```typescript
 import { Service, Handler, InjectClient, RestateContext, type ServiceClient } from 'nestjs-restate';
@@ -330,17 +331,17 @@ For workflows, use `WorkflowClient<T>`:
 
 ## Error Handling
 
-Restate automatically **retries** handler invocations when they fail. Understanding when to stop retries is key to building correct services.
+Restate **retries** handler invocations when they fail. You need to know when to stop retries.
 
 ### Terminal vs Retryable Errors
 
 | Error type | Restate behavior |
 |---|---|
 | Regular `Error` | **Retried** according to the retry policy (default: infinite) |
-| `TerminalError` | **Not retried** — failure is written as output and returned to the caller |
+| `TerminalError` | **Not retried.** Failure is written as output and returned to the caller |
 | `RetryableError` | **Retried** with an optional `retryAfter` delay hint |
-| `TimeoutError` | `TerminalError` subclass (code 408) — returned by `ctx.promise().orTimeout()` |
-| `CancelledError` | `TerminalError` subclass (code 409) — when an invocation is cancelled |
+| `TimeoutError` | `TerminalError` subclass (code 408), returned by `ctx.promise().orTimeout()` |
+| `CancelledError` | `TerminalError` subclass (code 409), when an invocation is cancelled |
 
 ### Usage
 
@@ -407,11 +408,11 @@ All error classes (`TerminalError`, `RetryableError`, `TimeoutError`, `Cancelled
 
 ## Execution Pipeline
 
-Guards, interceptors, pipes, and exception filters work on Restate handlers automatically — use `@UseGuards()`, `@UseInterceptors()`, `@UseFilters()` the same way you would on a controller.
+Guards, interceptors, pipes, and exception filters work on Restate handlers. Use `@UseGuards()`, `@UseInterceptors()`, `@UseFilters()` the same way you would on a controller.
 
 ### Handler Parameter Decorators
 
-Use `@Input()` and `@Ctx()` to inject handler arguments — same pattern as `@Body()` / `@Param()` for HTTP or `@Args()` for GraphQL:
+Use `@Input()` and `@Ctx()` to inject handler arguments, same pattern as `@Body()` / `@Param()` for HTTP or `@Args()` for GraphQL:
 
 ```typescript
 @Service('payment')
@@ -436,7 +437,7 @@ export class PaymentService {
 | `@Input('property')` | Single property from the input |
 | `@Ctx()` | Restate SDK context (`Context`, `ObjectContext`, `WorkflowContext`) |
 
-Handlers without decorators continue to work — `@Input()` is injected automatically as the first parameter when no decorators are present.
+Handlers without decorators continue to work. `@Input()` is injected automatically as the first parameter when no decorators are present.
 
 ### Guards and Interceptors
 
@@ -455,7 +456,7 @@ export class AmountLimitGuard implements CanActivate {
 
 ### RestateExceptionFilter
 
-Maps NestJS HTTP exceptions to Restate semantics — `TerminalError` passes through, 4xx → `TerminalError` (not retried), 5xx/unknown → rethrown (retried). Complementary to `asTerminalError`:
+Maps NestJS HTTP exceptions to Restate semantics. `TerminalError` passes through, 4xx becomes `TerminalError` (not retried), 5xx/unknown is rethrown (retried). Works alongside `asTerminalError`:
 
 ```typescript
 @Service('payment')
@@ -467,7 +468,7 @@ To disable pipeline features globally, see `pipeline` in [Configuration](#module
 
 ## Logging
 
-`nestjs-restate` ships a **replay-aware logger** that works automatically — no setup required.
+`nestjs-restate` ships a **replay-aware logger** that works out of the box.
 
 ### How It Works
 
@@ -480,7 +481,7 @@ Restate replays handler invocations to rebuild state after crashes. During repla
 
 ### Usage
 
-Use the standard NestJS `Logger` — it's replay-safe inside handlers with zero extra code:
+Use the standard NestJS `Logger`. It's replay-safe inside handlers with zero extra code:
 
 ```typescript
 import { Logger } from '@nestjs/common';
@@ -505,7 +506,7 @@ export class GreeterService {
 }
 ```
 
-You can also call `this.ctx.console` directly — both approaches are replay-safe:
+You can also call `this.ctx.console` directly. Both approaches are replay-safe:
 
 ```typescript
 this.ctx.console.log('direct SDK logging');   // also silenced during replay
@@ -642,7 +643,7 @@ To obtain your authentication token, log in via the [Restate Cloud dashboard](ht
 
 ### Component-Level Options
 
-Decorators accept a string name, an options object, or nothing at all — omitting the name defaults it to the class name:
+Decorators accept a string name, an options object, or nothing at all. Omitting the name defaults it to the class name:
 
 ```typescript
 @Service()                          // name → 'PaymentService'
@@ -720,7 +721,7 @@ autoRegister: { deploymentUrl: 'http://host.docker.internal:{{port}}' },
 
 #### Registration Mode
 
-By default, auto-registration uses `force: true` (development mode) — every restart overwrites the existing deployment. For production, use `mode: 'production'` to skip registration when the interface hasn't changed:
+By default, auto-registration uses `force: true` (development mode). Every restart overwrites the existing deployment. For production, use `mode: 'production'` to skip registration when the interface hasn't changed:
 
 ```typescript
 autoRegister: {
@@ -732,10 +733,77 @@ autoRegister: {
 
 | Mode | Behavior |
 |---|---|
-| `'development'` (default) | Always registers with `force: true` — safe for local dev |
-| `'production'` | Computes a SHA-256 hash of the service interface. If the deployment already exists with the same hash, registration is skipped entirely — zero unnecessary writes to Restate. |
+| `'development'` (default) | Always registers with `force: true`. Safe for local dev |
+| `'production'` | Computes a SHA-256 hash of the service interface. If the deployment already exists with the same hash, registration is skipped entirely. No unnecessary writes to Restate. |
 
 The hash is stored as `nestjs-restate.interface-hash` in the deployment metadata and can be inspected via the Restate admin API.
+
+#### Deployment Change Detection
+
+Restate uses [immutable deployments](https://docs.restate.dev/services/versioning): each code version gets a unique endpoint URL. New requests route to the latest deployment while in-flight invocations drain on the old one. This is the recommended approach for production (blue-green style), and platforms like AWS Lambda or the [Restate Kubernetes operator](https://docs.restate.dev/services/versioning) handle it natively.
+
+In practice, most NestJS applications deploy in-place: same URL, new code. There is no second deployment to drain to. When you register the updated endpoint with `force: true`, the old deployment is replaced immediately and any in-flight invocations tied to the previous code version may fail. This is where the `onDeploymentMetadataChange` hook comes in.
+
+`nestjs-restate` diffs the metadata you tag on your components and calls your hook **before** registration happens. You get to inspect what changed and take action (cancel stale invocations, pause handlers, send alerts, or abort the registration entirely) before Restate replaces the old deployment.
+
+Tag your components with metadata:
+
+```typescript
+@Workflow({ name: 'order', metadata: { revision: '1' } })
+export class OrderWorkflow { ... }
+
+@Service({ name: 'payment', metadata: { version: '2.0' } })
+export class PaymentService { ... }
+```
+
+Then configure the hook:
+
+```typescript
+RestateModule.forRoot({
+    admin: 'http://localhost:9070',
+    endpoint: { port: 9080 },
+    autoRegister: {
+        deploymentUrl: 'http://host.docker.internal:9080',
+        onDeploymentMetadataChange: async (changes, admin) => {
+            for (const change of changes) {
+                console.log(
+                    `[deploy] ${change.serviceName} (${change.type}): ` +
+                        `${JSON.stringify(change.oldMetadata)} → ${JSON.stringify(change.newMetadata)}`
+                );
+                // Use the admin connection to call the Restate admin API directly —
+                // cancel invocations, pause handlers, or query state before the new
+                // deployment replaces the old one.
+                // See: https://docs.restate.dev/services/versioning#manual-versioning
+            }
+        },
+    },
+})
+```
+
+Each `DeploymentMetadataChange` describes one component:
+
+```typescript
+interface DeploymentMetadataChange {
+    serviceName: string;
+    type: 'service' | 'virtualObject' | 'workflow' | 'unknown';
+    oldMetadata: Record<string, string> | null;  // null = no metadata entry in current deployment
+    newMetadata: Record<string, string> | null;  // null = no metadata entry in new version
+}
+```
+
+The second argument gives you admin connection details (`{ url: string; authToken?: string }`) so your hook can call the [Restate admin API](https://docs.restate.dev/references/admin-api) directly.
+
+**Lifecycle:**
+
+1. On startup, the module collects `metadata` from all decorated components
+2. It fetches existing deployments via `GET /deployments` and diffs old vs new metadata
+3. If anything changed, your hook is called **before** registration
+4. If the hook throws, registration is aborted. The old deployment stays active
+5. If the hook succeeds (or nothing changed), registration proceeds normally
+
+The hook fires in both development and production modes. In production mode, the GET is shared with the hash pre-check, so there are no extra requests. If metadata changed but the interface hash has not, the module force-registers to persist the updated metadata.
+
+> **If you use immutable deployments** (unique URL per version), the hook is still useful for observability (you see what changed each deploy), but Restate already handles invocation draining for you. See [Restate's versioning guide](https://docs.restate.dev/services/versioning) for the full model.
 
 ## API Reference
 
@@ -745,25 +813,25 @@ All class decorators implicitly apply `@Injectable()`.
 
 | Decorator | Description |
 |---|---|
-| `@Service(name?)` | [Restate Service](https://docs.restate.dev/develop/ts/services) — stateless durable handlers. Name defaults to the class name when omitted. |
-| `@VirtualObject(name?)` | [Restate Virtual Object](https://docs.restate.dev/develop/ts/services#virtual-objects) — keyed stateful handlers. Name defaults to the class name when omitted. |
-| `@Workflow(name?)` | [Restate Workflow](https://docs.restate.dev/develop/ts/services#workflows) — long-running durable process. Name defaults to the class name when omitted. |
+| `@Service(name?)` | [Restate Service](https://docs.restate.dev/develop/ts/services). Stateless durable handlers. Name defaults to the class name when omitted. |
+| `@VirtualObject(name?)` | [Restate Virtual Object](https://docs.restate.dev/develop/ts/services#virtual-objects). Keyed stateful handlers. Name defaults to the class name when omitted. |
+| `@Workflow(name?)` | [Restate Workflow](https://docs.restate.dev/develop/ts/services#workflows). Long-running durable process. Name defaults to the class name when omitted. |
 | `@Handler()` | Handler method on `@Service`, or exclusive handler on `@VirtualObject` |
 | `@Shared()` | Concurrent handler on `@VirtualObject` (for reads that can run in parallel) |
 | `@Signal()` | Signal handler on `@Workflow` (receives external signals while the workflow runs) |
 | `@Run()` | Entry point of a `@Workflow` (exactly one per workflow) |
-| `@InjectClient()` | Injects the enhanced `Ingress` client — accepts decorated classes directly (for use outside handler context) |
-| `@InjectClient(ServiceClass)` | Injects a typed service proxy (handler context only — uses AsyncLocalStorage) |
+| `@InjectClient()` | Injects the enhanced `Ingress` client. Accepts decorated classes directly (for use outside handler context) |
+| `@InjectClient(ServiceClass)` | Injects a typed service proxy (handler context only, uses AsyncLocalStorage) |
 
 | Injectable | Description |
 |---|---|
-| `RestateContext` | Injectable wrapper around the Restate SDK context — automatically scoped to the current request via `AsyncLocalStorage` |
+| `RestateContext` | Injectable wrapper around the Restate SDK context, scoped to the current request via `AsyncLocalStorage` |
 
-Component and handler decorators also accept an optional options object for SDK-level configuration — see [Configuration](#configuration).
+Component and handler decorators also accept an optional options object for SDK-level configuration. See [Configuration](#configuration).
 
 ### Context API
 
-`RestateContext` exposes the full Restate SDK context surface. All methods delegate to the underlying SDK — no custom behavior is added.
+`RestateContext` exposes the full Restate SDK context surface. All methods delegate to the underlying SDK.
 
 | Category | Method | Description |
 |----------|--------|-------------|
@@ -785,11 +853,11 @@ For service-to-service calls, use `@InjectClient()` with typed proxies instead o
 
 | Export | Description |
 |---|---|
-| `Input()` | Parameter decorator — injects handler input (or a single property with `@Input('prop')`) |
-| `Ctx()` | Parameter decorator — injects the Restate SDK context |
-| `RestateExceptionFilter` | Exception filter — 4xx `HttpException` → `TerminalError`, 5xx/unknown → rethrown |
-| `RestateExecutionContext` | Typed wrapper with `getInput()` / `getRestateContext()` — alternative to `switchToRpc()` |
-| `RestateContextType` | String literal `'restate'` — returned by `context.getType()` |
+| `Input()` | Parameter decorator. Injects handler input (or a single property with `@Input('prop')`) |
+| `Ctx()` | Parameter decorator. Injects the Restate SDK context |
+| `RestateExceptionFilter` | Exception filter. 4xx `HttpException` becomes `TerminalError`, 5xx/unknown is rethrown |
+| `RestateExecutionContext` | Typed wrapper with `getInput()` / `getRestateContext()`, alternative to `switchToRpc()` |
+| `RestateContextType` | String literal `'restate'`, returned by `context.getType()` |
 | `PipelineOptions` | Configuration type for the `pipeline` module option |
 
 ## Migrating from v1
