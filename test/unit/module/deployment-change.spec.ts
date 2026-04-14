@@ -693,4 +693,110 @@ describe("deployment change detection", () => {
 
         await app.close();
     });
+
+    it("should match existing deployment when Restate adds trailing slash to URI", async () => {
+        const hookFn = vi.fn();
+
+        // Restate returns URI with trailing slash, but config has no trailing slash
+        fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+            if (!opts?.method || opts.method === "GET") {
+                return {
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            deployments: [
+                                {
+                                    uri: "http://host:9080/", // trailing slash from Restate
+                                    metadata: {
+                                        "nestjs-restate.component-metadata": JSON.stringify({
+                                            order: { revision: "1" },
+                                            payment: { version: "2.0" },
+                                        }),
+                                    },
+                                },
+                            ],
+                        }),
+                };
+            }
+            return { ok: true, status: 201, text: () => Promise.resolve("") };
+        });
+
+        const module = await Test.createTestingModule({
+            imports: [
+                RestateModule.forRoot({
+                    ingress: "http://localhost:8080",
+                    admin: "http://localhost:9070",
+                    endpoint: { port: 0 },
+                    autoRegister: {
+                        deploymentUrl: "http://host:9080", // no trailing slash
+                        onDeploymentChange: hookFn,
+                    },
+                }),
+            ],
+            providers: [OrderWorkflow, PaymentService],
+        }).compile();
+
+        const app = module.createNestApplication();
+        await app.init();
+
+        // Hook should NOT be called — metadata matches, URI trailing slash shouldn't matter
+        expect(hookFn).not.toHaveBeenCalled();
+
+        await app.close();
+    });
+
+    it("should detect real changes even when Restate URI has trailing slash", async () => {
+        const hookFn = vi.fn();
+
+        fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
+            if (!opts?.method || opts.method === "GET") {
+                return {
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            deployments: [
+                                {
+                                    uri: "http://host:9080/", // trailing slash
+                                    metadata: {
+                                        "nestjs-restate.component-metadata": JSON.stringify({
+                                            order: { revision: "0" }, // old revision
+                                            payment: { version: "2.0" },
+                                        }),
+                                    },
+                                },
+                            ],
+                        }),
+                };
+            }
+            return { ok: true, status: 201, text: () => Promise.resolve("") };
+        });
+
+        const module = await Test.createTestingModule({
+            imports: [
+                RestateModule.forRoot({
+                    ingress: "http://localhost:8080",
+                    admin: "http://localhost:9070",
+                    endpoint: { port: 0 },
+                    autoRegister: {
+                        deploymentUrl: "http://host:9080",
+                        onDeploymentChange: hookFn,
+                    },
+                }),
+            ],
+            providers: [OrderWorkflow, PaymentService],
+        }).compile();
+
+        const app = module.createNestApplication();
+        await app.init();
+
+        // Hook should be called with the actual change (order revision 0 → 1)
+        expect(hookFn).toHaveBeenCalledOnce();
+        const [changes] = hookFn.mock.calls[0];
+        expect(changes).toHaveLength(1);
+        expect(changes[0].serviceName).toBe("order");
+        expect(changes[0].oldMetadata).toEqual({ revision: "0" });
+        expect(changes[0].newMetadata).toEqual({ revision: "1" });
+
+        await app.close();
+    });
 });

@@ -255,12 +255,15 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                 if (getResponse.ok) {
                     const data: any = await getResponse.json();
                     const deployments = data.deployments ?? data;
+                    const normalizeUri = (uri: string) => uri.replace(/\/+$/, "");
+                    const normalizedDeploymentUrl = normalizeUri(deploymentUrl);
                     const existing = Array.isArray(deployments)
                         ? deployments.find(
                               (d: any) =>
-                                  d.uri === deploymentUrl ||
-                                  d.deployment?.uri === deploymentUrl ||
-                                  d.endpoint?.uri === deploymentUrl,
+                                  normalizeUri(d.uri ?? "") === normalizedDeploymentUrl ||
+                                  normalizeUri(d.deployment?.uri ?? "") ===
+                                      normalizedDeploymentUrl ||
+                                  normalizeUri(d.endpoint?.uri ?? "") === normalizedDeploymentUrl,
                           )
                         : undefined;
                     const existingMeta =
