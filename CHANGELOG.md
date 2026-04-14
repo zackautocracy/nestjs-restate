@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.0](https://github.com/razakiau/nestjs-restate/compare/nestjs-restate-v2.6.1...nestjs-restate-v2.7.0) (2026-04-14)
+
+
+### Features
+
+* deployment metadata change detection with onDeploymentMetadataChange hook ([#22](https://github.com/razakiau/nestjs-restate/issues/22)) ([7697fee](https://github.com/razakiau/nestjs-restate/commit/7697fee3008ff680e68a7a2c6a6928a69085d01f))
+
 ## [2.6.1](https://github.com/zackautocracy/nestjs-restate/compare/nestjs-restate-v2.6.0...nestjs-restate-v2.6.1) (2026-03-09)
 
 
