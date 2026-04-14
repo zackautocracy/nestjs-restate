@@ -598,7 +598,7 @@ describe("RestateModule", () => {
 
             const logCalls200 = stdoutSpy.mock.calls
                 .map((c) => String(c[0]))
-                .filter((s) => s.includes("already registered"));
+                .filter((s) => s.includes("re-registered"));
             expect(logCalls200.length).toBeGreaterThan(0);
 
             await app2.close();

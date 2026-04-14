@@ -742,7 +742,7 @@ The hash is stored as `nestjs-restate.interface-hash` in the deployment metadata
 
 Restate uses [immutable deployments](https://docs.restate.dev/services/versioning): each code version gets a unique endpoint URL. New requests route to the latest deployment while in-flight invocations drain on the old one. This is the recommended approach for production (blue-green style), and platforms like AWS Lambda or the [Restate Kubernetes operator](https://docs.restate.dev/services/versioning) handle it natively.
 
-In practice, most NestJS applications deploy in-place: same URL, new code. There is no second deployment to drain to. When you register the updated endpoint with `force: true`, the old deployment is replaced immediately and any in-flight invocations tied to the previous code version may fail. This is where the `onDeploymentChange` hook comes in.
+In practice, most NestJS applications deploy in-place: same URL, new code. There is no second deployment to drain to. When you register the updated endpoint with `force: true`, the old deployment is replaced immediately and any in-flight invocations tied to the previous code version may fail. This is where the `onDeploymentMetadataChange` hook comes in.
 
 `nestjs-restate` diffs the metadata you tag on your components and calls your hook **before** registration happens. You get to inspect what changed and take action (cancel stale invocations, pause handlers, send alerts, or abort the registration entirely) before Restate replaces the old deployment.
 
@@ -764,7 +764,7 @@ RestateModule.forRoot({
     endpoint: { port: 9080 },
     autoRegister: {
         deploymentUrl: 'http://host.docker.internal:9080',
-        onDeploymentChange: async (changes, admin) => {
+        onDeploymentMetadataChange: async (changes, admin) => {
             for (const change of changes) {
                 console.log(
                     `[deploy] ${change.serviceName} (${change.type}): ` +
@@ -780,10 +780,10 @@ RestateModule.forRoot({
 })
 ```
 
-Each `DeploymentChange` describes one component:
+Each `DeploymentMetadataChange` describes one component:
 
 ```typescript
-interface DeploymentChange {
+interface DeploymentMetadataChange {
     serviceName: string;
     type: 'service' | 'virtualObject' | 'workflow' | 'unknown';
     oldMetadata: Record<string, string> | null;  // null = no metadata entry in current deployment

@@ -23,7 +23,7 @@ import { getRegisteredComponents } from "./registry/component-registry";
 import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants";
 import type {
     AdminConfig,
-    DeploymentChange,
+    DeploymentMetadataChange,
     IngressConfig,
     RestateModuleAsyncOptions,
     RestateModuleOptions,
@@ -55,7 +55,8 @@ export function computeInterfaceHash(summary: ComponentSummary[]): string {
 @Global()
 @Module({})
 export class RestateModule implements OnModuleInit, OnModuleDestroy {
-    private static readonly logger = new Logger(RestateModule.name);
+    private static readonly logger = new Logger("RestateModule");
+    private static readonly deploymentLogger = new Logger("RestateDeployment");
     private componentSummary: ComponentSummary[] = [];
 
     constructor(
@@ -212,7 +213,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         const listeningPort = this.endpointManager.getListeningPort();
 
         if (autoRegister.deploymentUrl.includes("{{port}}") && listeningPort === null) {
-            RestateModule.logger.warn(
+            RestateModule.deploymentLogger.warn(
                 "autoRegister.deploymentUrl contains {{port}} placeholder but no port is available (lambda mode or no services). Skipping registration.",
             );
             return;
@@ -242,7 +243,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
         }
 
         // Unified GET: serves both hook diff and production pre-check
-        const needsGet = autoRegister.onDeploymentChange || mode === "production";
+        const needsGet = autoRegister.onDeploymentMetadataChange || mode === "production";
         let metadataChangesDetected = false;
         let existingHashMatches = false;
 
@@ -284,15 +285,15 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
                     if (changes.length > 0) {
                         metadataChangesDetected = true;
-                        if (autoRegister.onDeploymentChange) {
+                        if (autoRegister.onDeploymentMetadataChange) {
                             try {
-                                await autoRegister.onDeploymentChange(changes, {
+                                await autoRegister.onDeploymentMetadataChange(changes, {
                                     url: admin.url,
                                     authToken: admin.authToken,
                                 });
                             } catch (hookError: any) {
-                                RestateModule.logger.error(
-                                    `onDeploymentChange hook threw — aborting registration: ${hookError?.message ?? hookError}`,
+                                RestateModule.deploymentLogger.error(
+                                    `onDeploymentMetadataChange hook threw — aborting registration: ${hookError?.message ?? hookError}`,
                                 );
                                 return;
                             }
@@ -300,7 +301,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                     }
                 }
             } catch (error: any) {
-                RestateModule.logger.debug(
+                RestateModule.deploymentLogger.debug(
                     `Pre-check GET /deployments failed (${error?.message ?? error}), falling through to POST`,
                 );
             }
@@ -308,8 +309,8 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
         // Production skip-check: skip POST only if hash matches AND no metadata changes
         if (mode === "production" && existingHashMatches && !metadataChangesDetected) {
-            RestateModule.logger.log(
-                `Deployment already registered at ${admin.url} (URI: ${deploymentUrl}), no changes detected`,
+            RestateModule.deploymentLogger.log(
+                `Deployment unchanged at ${admin.url} (URI: ${deploymentUrl}), skipping registration`,
             );
             return;
         }
@@ -329,33 +330,35 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
             });
 
             if (response.status === 201) {
-                RestateModule.logger.log(
+                RestateModule.deploymentLogger.log(
                     `New deployment registered at ${admin.url} (URI: ${deploymentUrl})`,
                 );
             } else if (response.status === 200) {
-                RestateModule.logger.log(
-                    `Deployment already registered at ${admin.url} (URI: ${deploymentUrl}), no changes detected`,
+                RestateModule.deploymentLogger.log(
+                    `Deployment re-registered at ${admin.url} (URI: ${deploymentUrl}), component interface unchanged`,
                 );
             } else if (response.status === 409) {
                 const text = await response.text();
-                RestateModule.logger.warn(
+                RestateModule.deploymentLogger.warn(
                     `Deployment conflict at ${admin.url} — interface changed. Use a new deployment URL or set force: true. ${text}`.trim(),
                 );
             } else {
                 const text = await response.text();
-                RestateModule.logger.warn(
+                RestateModule.deploymentLogger.warn(
                     `Failed to auto-register deployment: ${response.status} ${text}`,
                 );
             }
         } catch (error: any) {
-            RestateModule.logger.warn(`Failed to auto-register deployment: ${error.message}`);
+            RestateModule.deploymentLogger.warn(
+                `Failed to auto-register deployment: ${error.message}`,
+            );
         }
     }
 
     private diffComponentMetadata(
         oldMetadataJson: string | undefined | null,
         newMetadataMap: Record<string, Record<string, string>>,
-    ): DeploymentChange[] {
+    ): DeploymentMetadataChange[] {
         let oldMap: Record<string, Record<string, string>> = {};
         if (oldMetadataJson) {
             try {
@@ -364,13 +367,13 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
                     oldMap = parsed;
                 }
             } catch {
-                RestateModule.logger.warn(
+                RestateModule.deploymentLogger.warn(
                     "Failed to parse old component metadata, treating as empty",
                 );
             }
         }
 
-        const changes: DeploymentChange[] = [];
+        const changes: DeploymentMetadataChange[] = [];
         const allNames = new Set([...Object.keys(oldMap), ...Object.keys(newMetadataMap)]);
 
         for (const name of allNames) {
@@ -382,7 +385,7 @@ export class RestateModule implements OnModuleInit, OnModuleDestroy {
 
             // Determine component type from current discovery
             const summary = this.componentSummary.find((cs) => cs.componentName === name);
-            const type = (summary?.componentType ?? "unknown") as DeploymentChange["type"];
+            const type = (summary?.componentType ?? "unknown") as DeploymentMetadataChange["type"];
 
             changes.push({
                 serviceName: name,

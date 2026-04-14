@@ -37,7 +37,7 @@ export interface DiscoveryResult {
 
 @Injectable()
 export class RestateExplorer {
-    private readonly logger = new Logger(RestateExplorer.name);
+    private readonly logger = new Logger("RestateDiscovery");
     private readonly restateParamsFactory = new RestateParamsFactory();
 
     constructor(

@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { Test } from "@nestjs/testing";
 import {
-    type DeploymentChange,
+    type DeploymentMetadataChange,
     Handler,
     RestateModule,
     Run,
@@ -86,7 +86,7 @@ describe("deployment change detection", () => {
         await app.close();
     });
 
-    it("should call onDeploymentChange with diff when metadata changes", async () => {
+    it("should call onDeploymentMetadataChange with diff when metadata changes", async () => {
         const hookFn = vi.fn();
 
         fetchSpy.mockImplementation(async (_url: string, opts?: any) => {
@@ -121,7 +121,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -179,7 +179,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -237,7 +237,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -249,7 +249,9 @@ describe("deployment change detection", () => {
 
         expect(hookFn).toHaveBeenCalledOnce();
         const [changes] = hookFn.mock.calls[0];
-        const removedChange = changes.find((c: DeploymentChange) => c.serviceName === "removed-wf");
+        const removedChange = changes.find(
+            (c: DeploymentMetadataChange) => c.serviceName === "removed-wf",
+        );
         expect(removedChange).toEqual({
             serviceName: "removed-wf",
             type: "unknown",
@@ -293,7 +295,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -341,7 +343,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: () => {
+                        onDeploymentMetadataChange: () => {
                             throw new Error("Deployment blocked!");
                         },
                     },
@@ -379,7 +381,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -444,7 +446,7 @@ describe("deployment change detection", () => {
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
                         mode: "production",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -500,7 +502,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -551,7 +553,7 @@ describe("deployment change detection", () => {
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
                         // mode defaults to 'development'
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -615,7 +617,7 @@ describe("deployment change detection", () => {
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
                         mode: "production",
-                        // No onDeploymentChange hook configured
+                        // No onDeploymentMetadataChange hook configured
                     },
                 }),
             ],
@@ -678,7 +680,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -729,7 +731,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080", // no trailing slash
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],
@@ -779,7 +781,7 @@ describe("deployment change detection", () => {
                     endpoint: { port: 0 },
                     autoRegister: {
                         deploymentUrl: "http://host:9080",
-                        onDeploymentChange: hookFn,
+                        onDeploymentMetadataChange: hookFn,
                     },
                 }),
             ],

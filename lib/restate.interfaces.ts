@@ -63,15 +63,15 @@ export interface AutoRegisterOptions {
      *
      * @example
      * ```ts
-     * onDeploymentChange: async (changes, admin) => {
+     * onDeploymentMetadataChange: async (changes, admin) => {
      *   for (const c of changes) {
      *     console.log(`${c.serviceName}: ${JSON.stringify(c.oldMetadata)} → ${JSON.stringify(c.newMetadata)}`);
      *   }
      * }
      * ```
      */
-    onDeploymentChange?: (
-        changes: DeploymentChange[],
+    onDeploymentMetadataChange?: (
+        changes: DeploymentMetadataChange[],
         admin: { url: string; authToken?: string },
     ) => void | Promise<void>;
 }
@@ -150,7 +150,7 @@ export interface PipelineOptions {
     filters?: boolean;
 }
 
-export interface DeploymentChange {
+export interface DeploymentMetadataChange {
     /** Restate-registered component name (e.g., "order") */
     serviceName: string;
     /** Component type ("unknown" for removed components not in current discovery) */

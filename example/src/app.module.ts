@@ -21,7 +21,7 @@ import { PaymentModule } from "./payment/payment.module";
             endpoint: { port: 9080 },
             autoRegister: {
                 deploymentUrl: "http://host.docker.internal:9080",
-                onDeploymentChange: async (changes) => {
+                onDeploymentMetadataChange: async (changes) => {
                     for (const change of changes) {
                         console.log(
                             `[deploy] ${change.serviceName} (${change.type}): ` +
