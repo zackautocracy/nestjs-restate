@@ -134,15 +134,15 @@ SWC is required for tests because Vitest's esbuild transform doesn't support `em
 
 ## Reporting Bugs
 
-Use the [Bug Report](https://github.com/zackautocracy/nestjs-restate/issues/new?template=bug_report.yml) template. Include a minimal reproduction.
+Use the [Bug Report](https://github.com/razakiau/nestjs-restate/issues/new?template=bug_report.yml) template. Include a minimal reproduction.
 
 ## Requesting Features
 
-Use the [Feature Request](https://github.com/zackautocracy/nestjs-restate/issues/new?template=feature_request.yml) template. Explain the use case and proposed API.
+Use the [Feature Request](https://github.com/razakiau/nestjs-restate/issues/new?template=feature_request.yml) template. Explain the use case and proposed API.
 
 ## Questions
 
-For questions and help, use [GitHub Discussions](https://github.com/zackautocracy/nestjs-restate/discussions) instead of issues.
+For questions and help, use [GitHub Discussions](https://github.com/razakiau/nestjs-restate/discussions) instead of issues.
 
 ## License
 

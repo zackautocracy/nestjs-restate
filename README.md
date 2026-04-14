@@ -8,10 +8,10 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/nestjs-restate"><img src="https://img.shields.io/npm/v/nestjs-restate.svg" alt="NPM Version" /></a>
-  <a href="https://github.com/zackautocracy/nestjs-restate/actions/workflows/ci.yml"><img src="https://github.com/zackautocracy/nestjs-restate/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://codecov.io/gh/zackautocracy/nestjs-restate"><img src="https://codecov.io/gh/zackautocracy/nestjs-restate/branch/main/graph/badge.svg" alt="Coverage" /></a>
+    <a href="https://github.com/razakiau/nestjs-restate/actions/workflows/ci.yml"><img src="https://github.com/razakiau/nestjs-restate/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://codecov.io/gh/razakiau/nestjs-restate"><img src="https://codecov.io/gh/razakiau/nestjs-restate/branch/main/graph/badge.svg" alt="Coverage" /></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <a href="https://deepwiki.com/zackautocracy/nestjs-restate"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
+    <a href="https://deepwiki.com/razakiau/nestjs-restate"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
 </p>
 
 ## Overview

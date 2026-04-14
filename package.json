@@ -3,10 +3,14 @@
     "version": "2.7.0",
     "description": "First-class NestJS integration for Restate durable execution engine",
     "license": "MIT",
-    "author": "Zakaria O.I.A <codeautocracy@gmail.com>",
+    "author": "Zakaria O.I.A",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/zackautocracy/nestjs-restate.git"
+        "url": "git+https://github.com/razakiau/nestjs-restate.git"
+    },
+    "homepage": "https://github.com/razakiau/nestjs-restate#readme",
+    "bugs": {
+        "url": "https://github.com/razakiau/nestjs-restate/issues"
     },
     "keywords": [
         "nestjs",
