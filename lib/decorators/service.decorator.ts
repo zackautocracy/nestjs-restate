@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { registerComponent } from "../registry/component-registry";
-import { SERVICE_METADATA_KEY } from "../restate.constants";
+import { registerComponent } from "../registry/component-registry.js";
+import { SERVICE_METADATA_KEY } from "../restate.constants.js";
 import type {
     ResolvedServiceComponentMetadata,
     ServiceComponentMetadata,
     ServiceDecoratorOptions,
-} from "../restate.interfaces";
+} from "../restate.interfaces.js";
 
 /**
  * Marks a class as a Restate service.

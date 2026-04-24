@@ -1,5 +1,5 @@
-import { HANDLER_METADATA_KEY } from "../restate.constants";
-import type { AnyHandlerOpts, HandlerMetadata, HandlerType } from "../restate.interfaces";
+import { HANDLER_METADATA_KEY } from "../restate.constants.js";
+import type { AnyHandlerOpts, HandlerMetadata, HandlerType } from "../restate.interfaces.js";
 
 function createHandlerDecorator(type: HandlerType): (options?: AnyHandlerOpts) => MethodDecorator {
     return (options?: AnyHandlerOpts) => {

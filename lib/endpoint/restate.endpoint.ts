@@ -2,12 +2,12 @@ import * as http2 from "node:http2";
 import { Injectable, Logger } from "@nestjs/common";
 import type { DefaultServiceOptions } from "@restatedev/restate-sdk";
 import * as restate from "@restatedev/restate-sdk";
-import { createRestateLoggerTransport } from "../logging/restate-logger.transport";
+import { createRestateLoggerTransport } from "../logging/restate-logger.transport.js";
 import type {
     EndpointConfig,
     RestateEndpointServerConfig,
     RestateErrorOptions,
-} from "../restate.interfaces";
+} from "../restate.interfaces.js";
 
 @Injectable()
 export class RestateEndpointManager {

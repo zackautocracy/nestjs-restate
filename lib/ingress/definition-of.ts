@@ -1,5 +1,5 @@
-import { getComponentMeta } from "../registry/component-metadata";
-import type { Constructor } from "./restate-ingress";
+import { getComponentMeta } from "../registry/component-metadata.js";
+import type { Constructor } from "./restate-ingress.js";
 
 const article = (w: string) => (w === "object" ? "an" : "a");
 

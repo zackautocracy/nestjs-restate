@@ -1,26 +1,26 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants";
+import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants.js";
 import { DiscoveryService, ExternalContextCreator } from "@nestjs/core";
 import * as restate from "@restatedev/restate-sdk";
-import { runWithContext } from "../context/restate-context.store";
+import { runWithContext } from "../context/restate-context.store.js";
 import {
     createDefaultRestateCallbackMetadata,
     RestateParamsFactory,
-} from "../pipeline/restate-params-factory";
+} from "../pipeline/restate-params-factory.js";
 import {
     HANDLER_METADATA_KEY,
     RESTATE_OPTIONS,
     SERVICE_METADATA_KEY,
     VIRTUAL_OBJECT_METADATA_KEY,
     WORKFLOW_METADATA_KEY,
-} from "../restate.constants";
+} from "../restate.constants.js";
 import type {
     HandlerMetadata,
     ResolvedServiceComponentMetadata,
     ResolvedVirtualObjectComponentMetadata,
     ResolvedWorkflowComponentMetadata,
     RestateModuleOptions,
-} from "../restate.interfaces";
+} from "../restate.interfaces.js";
 
 export interface ComponentSummary {
     componentName: string;

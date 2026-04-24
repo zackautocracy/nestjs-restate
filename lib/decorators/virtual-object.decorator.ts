@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { registerComponent } from "../registry/component-registry";
-import { VIRTUAL_OBJECT_METADATA_KEY } from "../restate.constants";
+import { registerComponent } from "../registry/component-registry.js";
+import { VIRTUAL_OBJECT_METADATA_KEY } from "../restate.constants.js";
 import type {
     ResolvedVirtualObjectComponentMetadata,
     VirtualObjectComponentMetadata,
     VirtualObjectDecoratorOptions,
-} from "../restate.interfaces";
+} from "../restate.interfaces.js";
 
 /**
  * Marks a class as a Restate virtual object.

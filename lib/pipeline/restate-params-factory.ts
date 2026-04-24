@@ -1,5 +1,5 @@
 import type { ParamData } from "@nestjs/common";
-import type { ParamsFactory } from "@nestjs/core/helpers/external-context-creator";
+import type { ParamsFactory } from "@nestjs/core/helpers/external-context-creator.js";
 
 export enum RestateParamtype {
     INPUT = 0,

@@ -2,12 +2,12 @@ import {
     SERVICE_METADATA_KEY,
     VIRTUAL_OBJECT_METADATA_KEY,
     WORKFLOW_METADATA_KEY,
-} from "../restate.constants";
+} from "../restate.constants.js";
 import type {
     ResolvedServiceComponentMetadata,
     ResolvedVirtualObjectComponentMetadata,
     ResolvedWorkflowComponentMetadata,
-} from "../restate.interfaces";
+} from "../restate.interfaces.js";
 
 export interface ComponentMeta {
     type: "service" | "object" | "workflow";

@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { registerComponent } from "../registry/component-registry";
-import { WORKFLOW_METADATA_KEY } from "../restate.constants";
+import { registerComponent } from "../registry/component-registry.js";
+import { WORKFLOW_METADATA_KEY } from "../restate.constants.js";
 import type {
     ResolvedWorkflowComponentMetadata,
     WorkflowComponentMetadata,
     WorkflowDecoratorOptions,
-} from "../restate.interfaces";
+} from "../restate.interfaces.js";
 
 /**
  * Marks a class as a Restate workflow.

@@ -1,5 +1,5 @@
 import type { ContextType, ExecutionContext } from "@nestjs/common";
-import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-host";
+import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-host.js";
 
 export type RestateContextType = "restate" | ContextType;
 

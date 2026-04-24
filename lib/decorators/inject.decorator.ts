@@ -1,6 +1,6 @@
 import { Inject } from "@nestjs/common";
-import { getClientToken } from "../proxy/client-token";
-import { RESTATE_CLIENT } from "../restate.constants";
+import { getClientToken } from "../proxy/client-token.js";
+import { RESTATE_CLIENT } from "../restate.constants.js";
 
 /** Inject the Restate Ingress client (no args) or a typed handler proxy (with target class). */
 export function InjectClient(): PropertyDecorator & ParameterDecorator;

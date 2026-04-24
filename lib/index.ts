@@ -44,8 +44,8 @@ export {
     TimeoutError,
 } from "@restatedev/restate-sdk";
 // Context
-export { RestateContext } from "./context/restate-context";
-export { getContextIfAvailable, getCurrentContext } from "./context/restate-context.store";
+export { RestateContext } from "./context/restate-context.js";
+export { getContextIfAvailable, getCurrentContext } from "./context/restate-context.store.js";
 export {
     Handler,
     InjectClient,
@@ -55,15 +55,15 @@ export {
     Signal,
     VirtualObject,
     Workflow,
-} from "./decorators";
+} from "./decorators/index.js";
 // Discovery
-export type { ComponentSummary, DiscoveryResult } from "./discovery/restate.explorer";
+export type { ComponentSummary, DiscoveryResult } from "./discovery/restate.explorer.js";
 // Definition utilities
 export {
     objectDefinitionOf,
     serviceDefinitionOf,
     workflowDefinitionOf,
-} from "./ingress/definition-of";
+} from "./ingress/definition-of.js";
 // Ingress (enhanced)
 export type {
     Constructor,
@@ -73,28 +73,28 @@ export type {
     IngressSendServiceClient,
     IngressServiceClient,
     IngressWorkflowClient,
-} from "./ingress/restate-ingress";
-export { createRestateIngress } from "./ingress/restate-ingress";
+} from "./ingress/restate-ingress.js";
+export { createRestateIngress } from "./ingress/restate-ingress.js";
 // Logging
-export { RestateLoggerService } from "./logging/restate-logger.service";
-export type { RestateLoggerOptions } from "./logging/restate-logger.transport";
-export { createRestateLoggerTransport } from "./logging/restate-logger.transport";
-export type { RestateContextType } from "./pipeline";
+export { RestateLoggerService } from "./logging/restate-logger.service.js";
+export type { RestateLoggerOptions } from "./logging/restate-logger.transport.js";
+export { createRestateLoggerTransport } from "./logging/restate-logger.transport.js";
+export type { RestateContextType } from "./pipeline/index.js";
 // Pipeline
-export { Ctx, Input, RestateExceptionFilter, RestateExecutionContext } from "./pipeline";
+export { Ctx, Input, RestateExceptionFilter, RestateExecutionContext } from "./pipeline/index.js";
 // Proxy types
 export type {
     HandlerMethods,
     ObjectClient,
     ServiceClient,
     WorkflowClient,
-} from "./proxy/client-proxy";
-export { getClientToken } from "./proxy/client-token";
+} from "./proxy/client-proxy.js";
+export { getClientToken } from "./proxy/client-token.js";
 // Component metadata (shared utility)
-export type { ComponentMeta } from "./registry/component-metadata";
-export { getComponentMeta, isRestateComponent } from "./registry/component-metadata";
+export type { ComponentMeta } from "./registry/component-metadata.js";
+export { getComponentMeta, isRestateComponent } from "./registry/component-metadata.js";
 // Constants (for advanced usage)
-export { RESTATE_CLIENT } from "./restate.constants";
+export { RESTATE_CLIENT } from "./restate.constants.js";
 // Types
 export type {
     AdminConfig,
@@ -116,6 +116,6 @@ export type {
     VirtualObjectDecoratorOptions,
     WorkflowComponentMetadata,
     WorkflowDecoratorOptions,
-} from "./restate.interfaces";
+} from "./restate.interfaces.js";
 // Module & utilities
-export { computeInterfaceHash, RestateModule } from "./restate.module";
+export { computeInterfaceHash, RestateModule } from "./restate.module.js";

@@ -1,5 +1,5 @@
 import { ConsoleLogger, type LoggerService } from "@nestjs/common";
-import { getContextIfAvailable } from "../context/restate-context.store";
+import { getContextIfAvailable } from "../context/restate-context.store.js";
 
 export class RestateLoggerService implements LoggerService {
     private readonly fallback = new ConsoleLogger();
