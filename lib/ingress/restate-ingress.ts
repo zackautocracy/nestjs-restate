@@ -8,8 +8,8 @@ import type {
     WorkflowSubmission,
 } from "@restatedev/restate-sdk-clients";
 
-import { getContextIfAvailable } from "../context/restate-context.store.js";
-import { getComponentMeta, isRestateComponent } from "../registry/component-metadata.js";
+import { getContextIfAvailable } from "../context/restate-context.store";
+import { getComponentMeta, isRestateComponent } from "../registry/component-metadata";
 
 // ── Helper Types ──
 

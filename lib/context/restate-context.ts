@@ -20,7 +20,7 @@ import type {
     WorkflowContext,
     WorkflowSharedContext,
 } from "@restatedev/restate-sdk";
-import { getCurrentContext } from "./restate-context.store.js";
+import { getCurrentContext } from "./restate-context.store";
 
 @Injectable()
 export class RestateContext {

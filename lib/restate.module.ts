@@ -11,23 +11,23 @@ import {
 } from "@nestjs/common";
 import { DiscoveryModule } from "@nestjs/core";
 import * as clients from "@restatedev/restate-sdk-clients";
-import { RestateContext } from "./context/restate-context.js";
-import type { ComponentSummary } from "./discovery/restate.explorer.js";
-import { RestateExplorer } from "./discovery/restate.explorer.js";
-import { RestateEndpointManager } from "./endpoint/restate.endpoint.js";
-import { createRestateIngress } from "./ingress/restate-ingress.js";
-import { RestateLoggerService } from "./logging/restate-logger.service.js";
-import { createClientProxy } from "./proxy/client-proxy.js";
-import { getClientToken } from "./proxy/client-token.js";
-import { getRegisteredComponents } from "./registry/component-registry.js";
-import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants.js";
+import { RestateContext } from "./context/restate-context";
+import type { ComponentSummary } from "./discovery/restate.explorer";
+import { RestateExplorer } from "./discovery/restate.explorer";
+import { RestateEndpointManager } from "./endpoint/restate.endpoint";
+import { createRestateIngress } from "./ingress/restate-ingress";
+import { RestateLoggerService } from "./logging/restate-logger.service";
+import { createClientProxy } from "./proxy/client-proxy";
+import { getClientToken } from "./proxy/client-token";
+import { getRegisteredComponents } from "./registry/component-registry";
+import { RESTATE_CLIENT, RESTATE_OPTIONS } from "./restate.constants";
 import type {
     AdminConfig,
     DeploymentMetadataChange,
     IngressConfig,
     RestateModuleAsyncOptions,
     RestateModuleOptions,
-} from "./restate.interfaces.js";
+} from "./restate.interfaces";
 
 function stableStringify(obj: Record<string, string> | null): string | null {
     if (obj === null) return null;

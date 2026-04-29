@@ -1,6 +1,6 @@
 import type { InvocationHandle, SendOpts } from "@restatedev/restate-sdk";
-import { getCurrentContext } from "../context/restate-context.store.js";
-import { getComponentMeta } from "../registry/component-metadata.js";
+import { getCurrentContext } from "../context/restate-context.store";
+import { getComponentMeta } from "../registry/component-metadata";
 
 // ── Proxy Types ──
 
