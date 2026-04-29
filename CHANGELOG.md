@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.1](https://github.com/razakiau/nestjs-restate/compare/nestjs-restate-v2.7.0...nestjs-restate-v2.7.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* make ESM entrypoint node-resolvable ([#25](https://github.com/razakiau/nestjs-restate/issues/25)) ([6f08779](https://github.com/razakiau/nestjs-restate/commit/6f08779c8f0ac601729b41c50efb9c35402f6711))
+
 ## [2.7.0](https://github.com/razakiau/nestjs-restate/compare/nestjs-restate-v2.6.1...nestjs-restate-v2.7.0) (2026-04-14)
 
 
