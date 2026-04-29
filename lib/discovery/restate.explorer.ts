@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants";
+import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants.js";
 import { DiscoveryService, ExternalContextCreator } from "@nestjs/core";
 import * as restate from "@restatedev/restate-sdk";
 import { runWithContext } from "../context/restate-context.store";
